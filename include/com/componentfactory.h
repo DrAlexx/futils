@@ -13,11 +13,11 @@ public:
     virtual ~ComponentFactory() override{}
 
     //interface IUnknown
-    virtual Error QueryInterface(const std::string&, void** ppv) override;
+    virtual HResult QueryInterface(const std::string&, void** ppv) override;
 
     //interface IFactory
-    virtual bool registerComponent(const std::string& id, std::function<IUnknown*()> f) override;
-    virtual bool unregisterComponent(const std::string& id) override;
+    virtual HResult registerComponent(const std::string& id, std::function<IUnknown*()> f) override;
+    virtual HResult unregisterComponent(const std::string& id) override;
     virtual IUnknown* create(const std::string& id) override;
     virtual std::vector<std::string> keys()const override;
 

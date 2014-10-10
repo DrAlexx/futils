@@ -28,16 +28,16 @@ int BaseComponent::Release()
     }
 }
 
-Error BaseComponent::QueryInterface(const std::string& id, void** ppv)
+HResult BaseComponent::QueryInterface(const std::string& id, void** ppv)
 {
     *ppv = nullptr;
 
     if(owner == nullptr){
         if(id == IUnknown::iid){
             *ppv = (IUnknown*)this;
-            return OK;
+            return HResult();
         }
-        return NO_INTERFACE;
+        return HResult(ErrorCode::NO_INTERFACE);
     }else{
         return owner->QueryInterface(id, ppv);
     }

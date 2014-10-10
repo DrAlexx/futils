@@ -1,6 +1,6 @@
 #pragma once
 
-#include <com/error.h>
+#include <com/hresult.h>
 #include <boost/intrusive_ptr.hpp>
 #include <string>
 
@@ -12,7 +12,7 @@ public:
 
     virtual int addRef()  = 0;
     virtual int Release() = 0;
-    virtual Error QueryInterface(const std::string&, void** ppv) = 0;
+    virtual HResult QueryInterface(const std::string&, void** ppv) = 0;
 
     static std::string iid;
 };

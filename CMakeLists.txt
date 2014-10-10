@@ -11,10 +11,10 @@ message(STATUS "Build type:" ${CMAKE_BUILD_TYPE})
 #list(REMOVE_DUPLICATES CMAKE_MODULE_PATH)
 
 #Enable C++0x
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wc++0x-compat -Wall -Wextra -pipe -fno-rtti")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wc++0x-compat -Wall -Wextra -pipe -fno-rtti -fPIC")
 
 set(futil_COM_HEADERS
-  include/com/error.h
+  include/com/hresult.h
   include/com/iunknown.h
   include/com/basecomponent.h
   include/com/ifactory.h

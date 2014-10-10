@@ -13,7 +13,7 @@ public:
 
     virtual int addRef() override;
     virtual int Release() override;
-    virtual Error QueryInterface(const std::string& id, void** ppv) override;
+    virtual HResult QueryInterface(const std::string& id, void** ppv) override;
 
 private:
     RefObject   ref;
