@@ -15,7 +15,7 @@ int BaseComponent::addRef()
         return owner->addRef();
 }
 
-int BaseComponent::Release()
+int BaseComponent::release()
 {
     if(owner == nullptr){
         auto val = ref.release();
@@ -24,7 +24,7 @@ int BaseComponent::Release()
         }
         return val;
     }else{
-        return owner->Release();
+        return owner->release();
     }
 }
 

@@ -11,7 +11,7 @@ public:
     virtual ~IUnknown(){}
 
     virtual int addRef()  = 0;
-    virtual int Release() = 0;
+    virtual int release() = 0;
     virtual HResult QueryInterface(const std::string&, void** ppv) = 0;
 
     static std::string iid;
@@ -28,6 +28,6 @@ inline void intrusive_ptr_add_ref(COM::IUnknown* i){
 }
 
 inline void intrusive_ptr_release(COM::IUnknown* i){
-    i->Release();
+    i->release();
 }
 }

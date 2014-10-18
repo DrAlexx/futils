@@ -12,7 +12,7 @@ public:
     virtual ~BaseComponent() override{}
 
     virtual int addRef() override;
-    virtual int Release() override;
+    virtual int release() override;
     virtual HResult QueryInterface(const std::string& id, void** ppv) override;
 
 private:
