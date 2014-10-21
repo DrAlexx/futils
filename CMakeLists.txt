@@ -11,7 +11,7 @@ message(STATUS "Build type:" ${CMAKE_BUILD_TYPE})
 #list(REMOVE_DUPLICATES CMAKE_MODULE_PATH)
 
 #Enable C++0x
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wc++0x-compat -Wall -Wextra -pipe -fno-rtti -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wc++0x-compat -Wall -Wextra -pipe -fno-rtti -fPIC -fvisibility=hidden")
 
 set(futil_COM_HEADERS
   include/com/hresult.h
@@ -26,6 +26,7 @@ set(futil_UTIL_HEADERS
   include/util/singletone.h
   include/util/refobject.h
   include/util/patricia.h
+  include/util/visibility.h
 )
 
 set(futil_SOURCES
