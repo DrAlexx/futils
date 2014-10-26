@@ -1,7 +1,6 @@
 #pragma once
 
 #include <com/hresult.h>
-#include <boost/intrusive_ptr.hpp>
 #include <string>
 
 namespace COM{
@@ -16,9 +15,6 @@ public:
 
     static std::string iid;
 };
-
-typedef boost::intrusive_ptr<IUnknown> IUnknownPtr;
-
 }//namespace COM
 
 namespace boost {
@@ -30,4 +26,10 @@ inline void intrusive_ptr_add_ref(COM::IUnknown* i){
 inline void intrusive_ptr_release(COM::IUnknown* i){
     i->release();
 }
+}
+
+#include <boost/intrusive_ptr.hpp>
+
+namespace COM{
+    typedef boost::intrusive_ptr<IUnknown> IUnknownPtr;
 }
