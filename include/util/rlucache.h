@@ -4,18 +4,25 @@
 #include <unordered_map>
 #include <iterator>
 
-template<class Value, class Weight=Weight<Value>, Map=std::unordered_map<Value, typename std::list<Value>::iterator> >
+template<class T>
+struct Weight{
+    int operator()(T const& /*v*/){
+        return sizeof(T);
+    }
+};
+
+template<class Value, typename Weight=Weight<Value>, typename Map=std::unordered_map<Value, typename std::list<Value>::iterator> >
 class RLUCache{
     typedef Value value_type;
     typedef value_type& reference;
     typedef const reference const_reference;
     typedef value_type* pointer;
     typedef const pointer const_pointer;
-    typedef Map::difference_type difference_type;
-    typedef Map::size_type size_type;
+    typedef typename Map::difference_type difference_type;
+    typedef typename Map::size_type size_type;
 
     class iterator : public std::forward_iterator_tag {
-        explicit iterator(Map::iterator it)
+        explicit iterator(typename Map::iterator it)
             :map_it(it){}
 
         explicit iterator(iterator& it)
@@ -43,7 +50,7 @@ class RLUCache{
         }
 
         private:
-            Map::iterator map_it;
+            typename Map::iterator map_it;
     };
 
     typedef const iterator const_iterator;
