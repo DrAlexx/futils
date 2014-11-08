@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <iterator>
 
-template<class Value, class Weight=Weight<Value>, Map=std::unordered_map<Value, typename std::list<Value*>::iterator> >
+template<class Value, class Weight=Weight<Value>, Map=std::unordered_map<Value, typename std::list<Value>::iterator> >
 class RLUCache{
     typedef Value value_type;
     typedef value_type& reference;
