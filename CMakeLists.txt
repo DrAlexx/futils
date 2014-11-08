@@ -22,11 +22,12 @@ set(futil_COM_HEADERS
 )
 
 set(futil_UTIL_HEADERS
+  include/util/visibility.h
   include/util/bitutil.h
   include/util/singletone.h
   include/util/refobject.h
   include/util/patricia.h
-  include/util/visibility.h
+  include/util/rlucache.h
 )
 
 set(futil_SOURCES
