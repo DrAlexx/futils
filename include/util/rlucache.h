@@ -2,7 +2,7 @@
 
 #include <list>
 #include <unordered_map>
-#include <iterator>
+#include <utility>
 
 template<class T>
 struct Weight{
@@ -11,51 +11,26 @@ struct Weight{
     }
 };
 
-template<class Value, typename Weight=Weight<Value>, typename Map=std::unordered_map<Value, typename std::list<Value>::iterator> >
+template< class Key
+         ,class Value
+         ,typename Weight=Weight<Value>
+         ,typename Map=std::unordered_map<Key, typename std::pair<Value, typename std::list<Key>::iterator> >
+        >
 class RLUCache{
+public:
+    typedef Key key_type;
+    typedef typename Map::mapped_type mapped_type;
     typedef Value value_type;
     typedef value_type& reference;
     typedef const reference const_reference;
     typedef value_type* pointer;
     typedef const pointer const_pointer;
-    typedef typename Map::difference_type difference_type;
-    typedef typename Map::size_type size_type;
+    typedef typename std::list<Value>::difference_type difference_type;
+    typedef typename std::list<Value>::size_type size_type;
+    typedef typename std::list<Value>::iterator iterator;
+    typedef typename std::list<Value>::const_iterator const_iterator;
 
-    class iterator : public std::forward_iterator_tag {
-        explicit iterator(typename Map::iterator it)
-            :map_it(it){}
-
-        explicit iterator(iterator& it)
-            :map_it(it.map_it){}
-
-        bool operator==(const iterator& it){
-            return map_it == it.map_it;
-        }
-
-        bool operator!=(const iterator& it){
-            return map_it != it.map_it;
-        }
-
-        reference operator*(){
-            return (*map_it).first;
-        }
-
-        reference operator->(){
-            return (*map_it).first;
-        }
-
-        iterator& operator++(){
-            ++map_it;
-            return *this;
-        }
-
-        private:
-            typename Map::iterator map_it;
-    };
-
-    typedef const iterator const_iterator;
-
-    RLUCache(int max_weight, float purge_factor=1.0f)
+    RLUCache(int max_weight, float purge_factor=0.75f)
         :data_weight(0)
         ,maxWeight(max_weight)
         ,factor(purge_factor)
@@ -68,27 +43,27 @@ class RLUCache{
     }
 
     iterator begin(){
-        return iterator(collection.begin());
+        return orderList.begin();
     }
 
     const_iterator begin()const{
-        return iterator(collection.begin());
+        return orderList.begin();
     }
 
     const_iterator cbegin(){
-        return iterator(collection.cbegin());
+        return orderList.cbegin();
     }
 
     iterator end(){
-        return iterator(collection.end());
+        return orderList.end();
     }
 
     const_iterator end()const{
-        return iterator(collection.end());
+        return orderList.end();
     }
 
     const_iterator cend(){
-        return iterator(collection.cend());
+        return orderList.cend();
     }
 
     bool empty()const{
@@ -103,47 +78,56 @@ class RLUCache{
         return data_weight;
     }
 
-    iterator find(const_reference v){
-        return iterator(collection.find(v));
+    iterator find(key_type k){
+        auto it = collection.find(k);
+        return it==collection.end()?
+                    orderList.end()
+                    : it->second.second;
     }
 
-    void touch(const_reference v){
-        auto it = collection.find(v);
-        touch(it);
+    void touch(key_type k){
+        touch(find(k));
     }
 
     void touch(const_iterator i){
-        if(i != end()){
-            orderList.splice(orderList.begin(), orderList, i->second);
+        if(i != orderList.end()){
+            orderList.splice(orderList.begin(), orderList, i);
         }
     }
 
-    void insert(const_reference v){
-        auto it = collection.find(v);
+    void insert(key_type k, const_reference v, const_iterator position=begin()){
+        auto it = collection.find(k);
         if(it == collection.end()){
             weight += Weight(v);
-            auto list_it = orderList.insert(orderList.begin(), v);
-            collection.emplace(v, list_it);
+            auto list_it = orderList.insert(position, k);
+            collection.emplace(k, std::make_pair(v,list_it));
             purge();
         }
     }
 
-    void remove(const_reference v){
-        auto it = collection.find(v);
-        remove(it);
+    void push_front(key_type k, const_reference v){
+        insert(k,v);
+    }
+
+    void push_back(key_type k, const_reference v){
+        return insert(k,v, end());
+    }
+
+    void remove(key_type k){
+        remove(find(k));
     }
 
     void remove(const_iterator i){
         if(i != end()){
             weight -= Weight(i->first);
-            orderList.erase(i->second);
-            collection.erase(i);
+            collection.erase(*i);
+            orderList.erase(i);
         }
     }
 
 private:
-    typedef std::list<Value>    ValueList;
-    ValueList orderList;
+    typedef std::list<key_type>    KeyList;
+    KeyList orderList;
     Map collection;
     int data_weight;
     int maxWeight;
