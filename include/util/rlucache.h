@@ -6,7 +6,8 @@
 
 template<class T>
 struct Weight{
-    int operator()(T const& /*v*/){
+    int operator()(T const& v){
+        (void)v;
         return sizeof(T);
     }
 };
@@ -25,10 +26,12 @@ public:
     typedef const reference const_reference;
     typedef value_type* pointer;
     typedef const pointer const_pointer;
-    typedef typename std::list<Value>::difference_type difference_type;
-    typedef typename std::list<Value>::size_type size_type;
-    typedef typename std::list<Value>::iterator iterator;
-    typedef typename std::list<Value>::const_iterator const_iterator;
+    typedef typename std::list<key_type>::difference_type difference_type;
+    typedef typename std::list<key_type>::size_type size_type;
+    typedef typename std::list<key_type>::iterator iterator;
+    typedef typename std::list<key_type>::const_iterator const_iterator;
+    typedef typename Map::iterator map_iterator;
+    typedef typename Map::const_iterator map_const_iterator;
 
     RLUCache(int max_weight, float purge_factor=0.75f)
         :data_weight(0)
@@ -78,27 +81,29 @@ public:
         return data_weight;
     }
 
-    iterator find(key_type k){
-        auto it = collection.find(k);
-        return it==collection.end()?
-                    orderList.end()
-                    : it->second.second;
+    map_const_iterator map_find(key_type k){
+        return collection.find(k);
+    }
+
+    map_const_iterator map_end(){
+        return collection.end();
     }
 
     void touch(key_type k){
-        touch(find(k));
+        touch(list_find(k));
     }
 
-    void touch(const_iterator i){
+    void touch(iterator i){
         if(i != orderList.end()){
             orderList.splice(orderList.begin(), orderList, i);
         }
     }
 
-    void insert(key_type k, const_reference v, const_iterator position=begin()){
+    void insert(key_type k, const_reference v, iterator position){
         auto it = collection.find(k);
         if(it == collection.end()){
-            weight += Weight(v);
+            Weight w;
+            data_weight += w(v);
             auto list_it = orderList.insert(position, k);
             collection.emplace(k, std::make_pair(v,list_it));
             purge();
@@ -106,7 +111,7 @@ public:
     }
 
     void push_front(key_type k, const_reference v){
-        insert(k,v);
+        insert(k,v, begin());
     }
 
     void push_back(key_type k, const_reference v){
@@ -114,13 +119,15 @@ public:
     }
 
     void remove(key_type k){
-        remove(find(k));
+        remove(list_find(k));
     }
 
-    void remove(const_iterator i){
+    void remove(iterator i){
         if(i != end()){
-            weight -= Weight(i->first);
-            collection.erase(*i);
+            auto map_it = collection.find(*i);
+            Weight w;
+            data_weight -= w(map_it->second.first);
+            collection.erase(map_it);
             orderList.erase(i);
         }
     }
@@ -132,6 +139,13 @@ private:
     int data_weight;
     int maxWeight;
     float factor;
+
+    iterator list_find(key_type k){
+        auto it = collection.find(k);
+        return it==collection.end()?
+                    orderList.end()
+                    : it->second.second;
+    }
 
     void purge(){
         if(data_weight >= maxWeight){
