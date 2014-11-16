@@ -149,12 +149,13 @@ private:
 
     void purge(){
         if(data_weight >= maxWeight){
-            auto list_it = orderList.rbegin();
+            auto list_it = orderList.end();
+            --list_it;
             while(data_weight >maxWeight*factor
                   && !empty()){
-                auto next = ++list_it;
-                remove(*list_it);
-                list_it = next;
+                auto remove_it = list_it;
+                --list_it;
+                remove(*remove_it);
             }
         }
     }
