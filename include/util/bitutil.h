@@ -1,44 +1,75 @@
 #pragma once
 
-namespace util{
+namespace utils{
 
-//Returns container size in bites
-template< class C>
-size_t bit_count(const C& container)
+/**
+ *
+ */
+template<class C>
+class BitStreamAdaptor
 {
-    return container.size()*sizeof(typename C::value_type)*8;
-}
+public:
+    typedef C value_type;
+    typedef typename value_type& reference;
+    typedef const reference const_reference;
+    typedef typename  value_type::value_type item_type;
+    typedef typename  item_type& item_reference;
+    typedef const item_reference const_item_reference;
 
-//Returns bit value by bit position
-template< class C>
-bool checkbit(const C& container, size_t position)
-{
-    if(bit_count(container) < position) return false;
+    BitStreamAdaptor(const_reference v)
+        :value(v){}
 
-    size_t i = position/(sizeof(typename C::value_type)*8);
-    typename C::const_reference item = container.at(i);
-    return item && (1<<(position%(sizeof(typename C::value_type)*8)));
-}
-
-//Returns a position of mismatched bit
-template< class T>
-int mismatch_bit(const T& val1, const T& val2)
-{
-    auto mismatch_item = std::mismatch(std::begin(val1),
-                                       std::end(val1),
-                                       std::begin(val2));
-
-    if(mismatch_item.first ==  std::end(val1)
-       || mismatch_item.second ==  std::end(val2)) return -1;
-
-    auto mask = *mismatch_item.first ^ *mismatch_item.second;
-
-    //find on the first 1 in the mask
-    int i;
-    for( i=0; i < sizeof(mask)*8; ++i){
-        if(mask & (1<<i))break;
+    /**
+     * @brief size
+     * @return data size in bites
+     */
+    size_t size() const
+    {
+        return value.size()*sizeof(item_type)*8;
     }
 
-    return i;
-}
+    /**
+     * @brief bit
+     * @param bit_pos bit position
+     * @return true when bit by bit_pos is 1 otherwise false.
+     * When bit_pos is great than data size also returns false
+     */
+    bool bit(size_t bit_pos) const
+    {
+        if(size() < bit_pos) return false;
+
+        size_t i = bit_pos/(sizeof(item_type)*8);
+        const auto& item = container.at(i);
+        return item && (1<<(bit_pos%(sizeof(item_type)*8)));
+    }
+
+    /**
+     * @brief mismatch
+     * @param other const reference on another data
+     * @return the first mismathed bit position
+     */
+    int mismatch(const_reference other) const
+    {
+        const auto& mismatch_item = std::mismatch(std::begin(value),
+                                           std::end(value),
+                                           std::begin(other));
+
+        if(mismatch_item.first ==  std::end(value)
+           || mismatch_item.second ==  std::end(other)) return -1;
+
+        auto mask = *mismatch_item.first ^ *mismatch_item.second;
+
+        //find on the first 1 in the mask
+        int i;
+        for( i=0; i < sizeof(mask)*8; ++i){
+            if(mask & (1<<i))break;
+        }
+
+        return i;
+    }
+
+private:
+    const_reference value;
+};
+
 }//namespace util

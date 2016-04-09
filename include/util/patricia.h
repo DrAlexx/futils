@@ -1,114 +1,159 @@
 #pragma once
 
-#include "bitutil.h"
-
 #include <functional>
 #include <memory>
 #include <iterator>
 #include <stddef.h>
 
+#include "bitutil.h"
 
-template < class T, class Alloc = std::allocator<T> >
+/**
+ *
+ */
+template < class KEY, class Alloc = std::allocator<KEY> >
 class patricia_tree
 {
 public:
+    typedef KEY key_type;
+
     template <class Tp>
     struct Node
     {
-        enum Flags{
-            ZERO     = 0,
-            LEFT_UP  = 1,
-            RIGHT_UP = 2
-        };
-
-        Node(const Tp& nkey)
+        Node(const Tp& k)
         {
-            left   = nullptr;
-            right  = nullptr;
+            left     = nullptr;
+            right    = nullptr;
             position = 0;
-            attr   = ZERO;
-            key = nkey;
+            key      = k;
         }
 
-        Node *left;
-        Node *right;
+        Node   *left;
+        Node   *right;
         size_t position;
-        Flags  attr;
-        Tp key;
+        Tp     key;
     };
 
-    patricia_tree()
-    { root = nullptr; }
+    typedef Node<key_type> node_type;
 
-    bool isContain(const T& key)const
+    patricia_tree()
+    { root_node = nullptr; }
+
+    ~patricia_tree()
     {
-       auto node = lookUp(root, key);
-       return node != nullptr && node->key == key;
+        clear();
     }
 
-    void insert(const T& key)
+    void clear()
     {
-        auto node = lookUp(root, key);
+        if(root_node == nullptr) return;
+        recursive_clear(root_node);
+    }
 
-        //If the key is already present
-        if( node != nullptr
-                && node->key == key) return;
+    /**
+     * @brief isContain check atree contains a key argument
+     * @param key
+     * @return returns true when a tree contains a key otherwise returns false
+     */
+    bool isContain(const KEY& k)const
+    {
+       auto node = lookUp(root_node, k);
+       return node != nullptr && node->key == k;f
+    }
 
-        auto newNode = node_allocator.allocate(1, 0);
-        node_allocator.construct(newNode, key);
+    void insert(const KEY& k)
+    {
+        auto match_node = lookUp(root_node, k);
+
+        //If the key is already present do nothing
+        if( match_node != nullptr
+                 && match_node->key == k) return;
+
+        //create a new node
+        auto new_node = node_allocator.allocate(1, 0);
+        node_allocator.construct(new_node, k);
+
+        utils::BitStreamAdaptor key(k);
 
         //Define bit-position in the new node
-        if(node != nullptr){
-            newNode->position = util::mismatch_bit(node->key, key);
-            if(newNode->position == -1){
+        if(match_node != nullptr){
+            new_node->position = key.mismatch(match_node->key);
+            if(new_node->position == -1){
                 //keys are prefix for each to other
-                if(key.size() > node->key.size())
-                    newNode->position = (util::bit_count(key) - util::bit_count(node->key))/2;
-                else
-                    newNode->position = util::bit_count(key)/2;
+                if(new_node->key.size() < match_node->key.size()) {
+                    //OOps! the trie already contains longest key
+                    //Need to delete long key insert short key and insert long again
+                    //Sample: trie contains AAA and try to insert AA
+                    return;
+                }
+                new_node->position = match_node->key.size();
             }
         }else{
             //New node hasn't prefix in the trie
-            newNode->position = util::bit_count(key)/2;
+            new_node->position = 0;
         }
+
+        auto parent_node = lookUp(root_node, key, [&new_node](const node_type* node)
+        {
+            return new_node->position > node->position;
+        });
+        
 
     }
 
 private:
-    typedef typename Alloc::template rebind< Node<T> >::other Node_alloc_type;
+    typedef typename Alloc::template rebind< Node<KEY> >::other Node_alloc_type;
     Node_alloc_type node_allocator;
-    Node<T>    *root;
+    node_type       *root_node;
 
-    Node<T>* lookUp(Node<T>* start_node, const T& key
-                          ,std::function<bool(Node<T>*)> visitor=[](Node<T>*)
-    { return false; })const
+    /**
+     * @brief lookUp
+     * @param start_node
+     * @param k
+     * @param visitor is a functor that receives const node_type* argument.
+     *  when visitor returns true lookUp interupts node searchig and returns a current node.
+     * @return
+     */
+    const node_type* lookUp(const node_type* start_node, const KEY& k,
+                            std::function<bool(const node_type*)> visitor=[](const node_type*)
+                            { return false; }) const
     {
+        if(start_node == nullptr) return start_node;
+
         auto node = start_node;
-        if(node == nullptr) return node;
+        utils::BitStreamAdaptor key(k);
 
-        auto key_len = util::bit_count(key);
-        if(key_len-1 < node->position) return node;
-
-        do{
-            if(visitor(node)) break;
-
-            bool finish = false;
-            if( util::checkbit(key, node->position) ){
-                if( node->right != nullptr && key_len < node->right->position )
-                    break;
-                finish = node->attr | Node<T>::RIGHT_UP ? true : false ;
-                node = node->right;
-            }else{
-                if( node->left != nullptr && key_len < node->left->position )
-                    break;
-                finish  = node->attr | Node<T>::LEFT_UP ? true : false ;
-                node = node->left;
+        while(node->position < key.size()
+              && !visitor(node))
+        {
+            auto next_node = key.bit(node->position)? node->right : node->left;
+            if(next_node == nullptr) break;
+            if(next_node->position <= node->position){
+                //Leaf (link up) found
+                node = next_node;
+                break;
             }
-
-            if(finish)break;
-
-        }while(true);
+            node = next_node;
+        }
 
         return node;
     }
+
+    /**
+     * @brief recursive_clear
+     * @param start_node assume never is nullptr
+     */
+    void recursive_clear(node_type* start_node)
+    {
+        if(start_node->left != nullptr
+                && start_node->left->position > start_node->position)
+            recursive_clear(start_node->left);
+
+        if(start_node->right != nullptr
+                && start_node->right->position > start_node->position)
+            recursive_clear(start_node->right);
+
+        node_allocator.destroy(start_node);
+        node_allocator.deallocate(start_node);
+    }
+
 };
