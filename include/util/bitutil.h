@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <cstddef>
+
 namespace utils{
 
 /**
@@ -10,11 +13,10 @@ class BitStreamAdaptor
 {
 public:
     typedef C value_type;
-    typedef typename value_type& reference;
-    typedef const reference const_reference;
+    typedef C& reference;
+    typedef const C& const_reference;
     typedef typename  value_type::value_type item_type;
-    typedef typename  item_type& item_reference;
-    typedef const item_reference const_item_reference;
+    typedef typename  value_type::value_type& item_reference;
 
     BitStreamAdaptor(const_reference v)
         :value(v){}
@@ -23,7 +25,7 @@ public:
      * @brief size
      * @return data size in bites
      */
-    size_t size() const
+    std::size_t size() const
     {
         return value.size()*sizeof(item_type)*8;
     }
@@ -39,7 +41,7 @@ public:
         if(size() < bit_pos) return false;
 
         size_t i = bit_pos/(sizeof(item_type)*8);
-        const auto& item = container.at(i);
+        const auto& item = value.at(i);
         return item && (1<<(bit_pos%(sizeof(item_type)*8)));
     }
 
@@ -60,7 +62,7 @@ public:
         auto mask = *mismatch_item.first ^ *mismatch_item.second;
 
         //find on the first 1 in the mask
-        int i;
+        unsigned i;
         for( i=0; i < sizeof(mask)*8; ++i){
             if(mask & (1<<i))break;
         }

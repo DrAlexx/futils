@@ -11,7 +11,10 @@ message(STATUS "Build type:" ${CMAKE_BUILD_TYPE})
 #list(REMOVE_DUPLICATES CMAKE_MODULE_PATH)
 
 #Enable C++0x
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wc++0x-compat -Wall -Wextra -pipe -fno-rtti -fPIC -fvisibility=hidden")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wc++0x-compat -Wall -Wextra -pipe -fPIC -fvisibility=hidden")
+
+find_package(Boost 1.56 COMPONENTS unit_test_framework REQUIRED)
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIR})
 
 set(futil_UTIL_HEADERS
   include/util/visibility.h
@@ -21,9 +24,12 @@ set(futil_UTIL_HEADERS
   include/util/rlucache.h
 )
 
-add_library(futil STATIC
-  ${futil_UTIL_HEADERS}
- )
+add_executable(trie_test test/main.cpp test/test.cpp ${futil_UTIL_HEADERS})
+target_link_libraries(trie_test ${Boost_LIBRARIES})
+
+#add_library(futil STATIC
+#  ${futil_UTIL_HEADERS}
+# )
 
 include_directories(include)
 

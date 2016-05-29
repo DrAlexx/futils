@@ -15,6 +15,7 @@ class patricia_tree
 {
 public:
     typedef KEY key_type;
+    typedef utils::BitStreamAdaptor<KEY> BitStream;
 
     template <class Tp>
     struct Node
@@ -57,7 +58,7 @@ public:
     bool isContain(const KEY& k)const
     {
        auto node = lookUp(root_node, k);
-       return node != nullptr && node->key == k;f
+       return node != nullptr && node->key == k;
     }
 
     void insert(const KEY& k)
@@ -66,13 +67,13 @@ public:
 
         //If the key is already present do nothing
         if( match_node != nullptr
-                 && match_node->key == k) return;
+                && match_node->key == k ) return;
 
         //create a new node
         auto new_node = node_allocator.allocate(1, 0);
         node_allocator.construct(new_node, k);
 
-        utils::BitStreamAdaptor key(k);
+        BitStream key(k);
 
         //Define bit-position in the new node
         if(match_node != nullptr){
@@ -90,14 +91,41 @@ public:
         }else{
             //New node hasn't prefix in the trie
             new_node->position = 0;
+            if(key.bit(new_node->position)) {
+                new_node->right = new_node;
+                new_node->left  = root_node;
+            } else {
+                new_node->left  = new_node;
+                new_node->right = root_node;
+            }
+            root_node = new_node;
+            return;
         }
 
-        auto parent_node = lookUp(root_node, key, [&new_node](const node_type* node)
+        auto parent_node = lookUp(root_node, k, [&new_node](const node_type* node)
         {
             return new_node->position > node->position;
         });
-        
 
+
+        //Connect to the parent
+        node_type* next_node;
+        if(key.bit(parent_node->position)) {
+            next_node = parent_node->right;
+            parent_node->right = new_node;
+        } else {
+            next_node = parent_node->left;
+            parent_node->left = new_node;
+        }
+
+        //Connect a next node to the new
+        if(key.bit(new_node->position)) {
+            new_node->right = new_node;
+            new_node->left  = next_node;
+        } else {
+            new_node->left  = new_node;
+            new_node->right = next_node;
+        }
     }
 
 private:
@@ -113,14 +141,14 @@ private:
      *  when visitor returns true lookUp interupts node searchig and returns a current node.
      * @return
      */
-    const node_type* lookUp(const node_type* start_node, const KEY& k,
-                            std::function<bool(const node_type*)> visitor=[](const node_type*)
-                            { return false; }) const
+    node_type* lookUp(node_type* start_node, const KEY& k,
+                      std::function<bool(const node_type*)> visitor=[](const node_type*)
+                      { return false; })
     {
         if(start_node == nullptr) return start_node;
 
         auto node = start_node;
-        utils::BitStreamAdaptor key(k);
+        BitStream key(k);
 
         while(node->position < key.size()
               && !visitor(node))
@@ -153,7 +181,7 @@ private:
             recursive_clear(start_node->right);
 
         node_allocator.destroy(start_node);
-        node_allocator.deallocate(start_node);
+        node_allocator.deallocate(start_node,1);
     }
 
 };
