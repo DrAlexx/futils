@@ -47,11 +47,16 @@ public:
     void clear()
     {
         if(root_node == nullptr) return;
-        recursive_clear(root_node);
+
+        recursive_traverse(root_node, [this](node_type* node)
+            {
+                node_allocator.destroy(node);
+                node_allocator.deallocate(node, 1);
+            });
     }
 
     /**
-     * @brief isContain check atree contains a key argument
+     * @brief isContain check a tree contains a key argument
      * @param key
      * @return returns true when a tree contains a key otherwise returns false
      */
@@ -77,8 +82,9 @@ public:
 
         //Define bit-position in the new node
         if(match_node != nullptr){
-            new_node->position = key.mismatch(match_node->key);
-            if(new_node->position == -1){
+            auto new_pos = key.mismatch(match_node->key);
+            new_node->position = new_pos;
+            if(new_pos == -1){
                 //keys are prefix for each to other
                 if(new_node->key.size() < match_node->key.size()) {
                     //OOps! the trie already contains longest key
@@ -87,6 +93,9 @@ public:
                     return;
                 }
                 new_node->position = match_node->key.size();
+            }
+            if(new_pos == match_node->position){
+                new_node->position = match_node->position+1;
             }
         }else{
             //New node hasn't prefix in the trie
@@ -104,7 +113,7 @@ public:
 
         auto parent_node = lookUp(root_node, k, [&new_node](const node_type* node)
         {
-            return new_node->position > node->position;
+            return new_node->position <= node->position;
         });
 
 
@@ -126,6 +135,27 @@ public:
             new_node->left  = new_node;
             new_node->right = next_node;
         }
+    }
+
+    void dump(std::ostream& os) {
+        os << "digraph G { " << std::endl;
+        if(root_node != nullptr)
+            recursive_traverse(root_node, [&os](node_type* node)
+                {
+                if(node->left != nullptr){
+                    os << "\"key=" << node->key << ", pos=" << node->position << "\" -> ";
+                    os << "\"key=" << node->left->key << ", pos=" << node->left->position << "\";" << std::endl;
+                }
+                if(node->right != nullptr){
+                    os << "\"key=" << node->key << ", pos=" << node->position << "\" -> ";
+                    os << "\"key=" << node->right->key << ", pos=" << node->right->position << "\";" << std::endl;
+                }
+                if(node->right == nullptr && node->left == nullptr){
+                    os << "\"key=" << node->key << ", pos=" << node->position << "\";" << std::endl;
+                }
+                });
+
+        os << "}" << std::endl;
     }
 
 private:
@@ -167,21 +197,20 @@ private:
     }
 
     /**
-     * @brief recursive_clear
+     * @brief recursive_traverse
      * @param start_node assume never is nullptr
      */
-    void recursive_clear(node_type* start_node)
+    void recursive_traverse(node_type* start_node, std::function<void(node_type*)> visitor)
     {
         if(start_node->left != nullptr
                 && start_node->left->position > start_node->position)
-            recursive_clear(start_node->left);
+            recursive_traverse(start_node->left, visitor);
 
         if(start_node->right != nullptr
                 && start_node->right->position > start_node->position)
-            recursive_clear(start_node->right);
+            recursive_traverse(start_node->right, visitor);
 
-        node_allocator.destroy(start_node);
-        node_allocator.deallocate(start_node,1);
+        visitor(start_node);
     }
 
 };

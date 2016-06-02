@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <iostream>
 #include <cstddef>
 
 namespace utils{
@@ -42,7 +43,7 @@ public:
 
         size_t i = bit_pos/(sizeof(item_type)*8);
         const auto& item = value.at(i);
-        return item && (1<<(bit_pos%(sizeof(item_type)*8)));
+        return item & (1<<(bit_pos%(sizeof(item_type)*8)));
     }
 
     /**
@@ -74,4 +75,17 @@ private:
     const_reference value;
 };
 
-}//namespace util
+}//namespace utils
+
+template <class C>
+std::ostream &operator<<(std::ostream &output, const utils::BitStreamAdaptor<C> &stream)
+{
+    std::size_t size = stream.size();
+    for(std::size_t i=0; i < size; ++i)
+    {
+        output << (stream.bit(i)? '1' : '0');
+    }
+    return output;
+}
+
+
