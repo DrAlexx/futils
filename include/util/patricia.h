@@ -111,9 +111,10 @@ public:
             return;
         }
 
-        auto parent_node = lookUp(root_node, k, [&new_node](const node_type* node)
+        auto parent_node = lookUp(root_node, k, [&new_node](const node_type* node, const node_type* next)
         {
-            return new_node->position <= node->position;
+            return next->position <= node->position
+                    || (new_node->position >= node->position && new_node->position < next->position);
         });
 
 
@@ -172,7 +173,7 @@ private:
      * @return
      */
     node_type* lookUp(node_type* start_node, const KEY& k,
-                      std::function<bool(const node_type*)> visitor=[](const node_type*)
+                      std::function<bool(const node_type*, const node_type*)> visitor=[](const node_type*, const node_type*)
                       { return false; })
     {
         if(start_node == nullptr) return start_node;
@@ -180,11 +181,10 @@ private:
         auto node = start_node;
         BitStream key(k);
 
-        while(node->position < key.size()
-              && !visitor(node))
+        while(node->position < key.size())
         {
             auto next_node = key.bit(node->position)? node->right : node->left;
-            if(next_node == nullptr) break;
+            if(next_node == nullptr || visitor(node, next_node)) break;
             if(next_node->position <= node->position){
                 //Leaf (link up) found
                 node = next_node;
