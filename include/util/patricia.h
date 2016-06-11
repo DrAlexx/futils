@@ -2,8 +2,7 @@
 
 #include <functional>
 #include <memory>
-#include <iterator>
-#include <stddef.h>
+#include <utility>
 
 #include "bitutil.h"
 
@@ -34,7 +33,10 @@ public:
         Tp     key;
     };
 
-    typedef Node<key_type> node_type;
+    typedef Node<key_type>                          node_type;
+    typedef node_type*                              node_pointer;
+    typedef std::pair<node_pointer, node_pointer>   node_pointer_pair;
+
 
     patricia_tree()
     { root_node = nullptr; }
@@ -48,7 +50,7 @@ public:
     {
         if(root_node == nullptr) return;
 
-        recursive_traverse(root_node, [this](node_type* node)
+        recursive_traverse(root_node, [this](node_pointer node)
             {
                 node_allocator.destroy(node);
                 node_allocator.deallocate(node, 1);
@@ -62,17 +64,21 @@ public:
      */
     bool isContain(const KEY& k)const
     {
-       auto node = lookUp(root_node, k);
-       return node != nullptr && node->key == k;
+        auto pair = lookUp(root_node, k, [](node_pointer node, node_pointer next){
+            return next == nullptr || next->position <= node->position;
+        });
+       return pair.second != nullptr && pair.second->key == k;
     }
 
     void insert(const KEY& k)
     {
-        auto match_node = lookUp(root_node, k);
+        auto pair = lookUp(root_node, k, [](node_pointer node, node_pointer next){
+                return next == nullptr || next->position <= node->position;
+            });
+        auto match_node = pair.second == nullptr ? pair.first : pair.second;
 
         //If the key is already present do nothing
-        if( match_node != nullptr
-                && match_node->key == k ) return;
+        if( match_node != nullptr && match_node->key == k ) return;
 
         //create a new node
         auto new_node = node_allocator.allocate(1, 0);
@@ -87,7 +93,7 @@ public:
             if(new_pos == -1){
                 //keys are prefix for each to other
                 if(new_node->key.size() < match_node->key.size()) {
-                    //OOps! the trie already contains longest key
+                    //FIXME: OOps! the trie already contains longest key
                     //Need to delete long key insert short key and insert long again
                     //Sample: trie contains AAA and try to insert AA
                     return;
@@ -111,15 +117,15 @@ public:
             return;
         }
 
-        auto parent_node = lookUp(root_node, k, [&new_node](const node_type* node, const node_type* next)
+        auto parent_node = lookUp(root_node, k, [&new_node](const node_pointer node, const node_pointer next)
         {
-            return next->position <= node->position
+            return next == nullptr || next->position <= node->position
                     || (new_node->position >= node->position && new_node->position < next->position);
-        });
+        }).first;
 
 
         //Connect to the parent
-        node_type* next_node;
+        node_pointer next_node;
         if(key.bit(parent_node->position)) {
             next_node = parent_node->right;
             parent_node->right = new_node;
@@ -138,10 +144,51 @@ public:
         }
     }
 
+    /**
+     * @brief erase remove a key from the trie
+     * @param k is a key that should be removed
+     */
+    void erase(const KEY& k){
+        auto pair = lookUp(root_node, k, [](node_pointer node, node_pointer next){
+                return next == nullptr || next->position <= node->position;
+            });
+        auto parent_node = pair.first;
+        auto match_node = pair.second;
+
+        //If the key isn't present do nothing
+        if(match_node == nullptr || match_node->key != k ) return;
+
+        BitStream key(k);
+        auto link = key.bit(match_node->position)? match_node->right : match_node->left;
+        if(link != match_node){
+            //match_node isn't external leaf. So we need to swap the node with the external leaf parent
+            std::swap(match_node->position, parent_node->position);
+            std::swap(match_node->left,     parent_node->left);
+            std::swap(match_node->right,    parent_node->right);
+            if(key.bit(match_node->position)){
+                match_node->right = match_node;
+            } else {
+                match_node->left = match_node;
+            }
+        }
+
+        //link a next after the match_node
+        auto next_link = key.bit(match_node->position)? match_node->left : match_node->right;
+        if(key.bit(parent_node->position)) {
+            parent_node->left = next_link;
+        } else {
+            parent_node->right = next_link;
+        }
+
+        //remove unlinked match_node
+        node_allocator.destroy(match_node);
+        node_allocator.deallocate(match_node, 1);
+    }
+
     void dump(std::ostream& os) {
         os << "digraph G { " << std::endl;
         if(root_node != nullptr)
-            recursive_traverse(root_node, [&os](node_type* node)
+            recursive_traverse(root_node, [&os](node_pointer node)
                 {
                 if(node->left != nullptr){
                     os << "\"key=" << node->key << ", pos=" << node->position << "\" -> ";
@@ -160,47 +207,42 @@ public:
     }
 
 private:
-    typedef typename Alloc::template rebind< Node<KEY> >::other Node_alloc_type;
+    typedef typename Alloc::template rebind< node_type >::other Node_alloc_type;
     Node_alloc_type node_allocator;
-    node_type       *root_node;
+    node_pointer    root_node;
 
     /**
      * @brief lookUp
      * @param start_node
      * @param k
-     * @param visitor is a functor that receives const node_type* argument.
+     * @param visitor is a functor that receives const node_pointer argument.
      *  when visitor returns true lookUp interupts node searchig and returns a current node.
      * @return
      */
-    node_type* lookUp(node_type* start_node, const KEY& k,
-                      std::function<bool(const node_type*, const node_type*)> visitor=[](const node_type*, const node_type*)
-                      { return false; })
+    node_pointer_pair lookUp(node_pointer start_node, const KEY& k,
+                             std::function<bool(const node_pointer, const node_pointer)> visitor)
     {
-        if(start_node == nullptr) return start_node;
+        if(start_node == nullptr) return node_pointer_pair(nullptr, nullptr);
 
-        auto node = start_node;
         BitStream key(k);
+        node_pointer node = start_node;
+        node_pointer next = nullptr;
 
         while(node->position < key.size())
         {
-            auto next_node = key.bit(node->position)? node->right : node->left;
-            if(next_node == nullptr || visitor(node, next_node)) break;
-            if(next_node->position <= node->position){
-                //Leaf (link up) found
-                node = next_node;
-                break;
-            }
-            node = next_node;
+            next = key.bit(node->position)? node->right : node->left;
+            if(visitor(node, next)) break;
+            node = next;
         }
 
-        return node;
+        return node_pointer_pair(node, next);
     }
 
     /**
      * @brief recursive_traverse
      * @param start_node assume never is nullptr
      */
-    void recursive_traverse(node_type* start_node, std::function<void(node_type*)> visitor)
+    void recursive_traverse(node_pointer start_node, std::function<void(node_pointer)> visitor)
     {
         if(start_node->left != nullptr
                 && start_node->left->position > start_node->position)
