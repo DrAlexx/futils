@@ -7,7 +7,9 @@
 #include "bitutil.h"
 
 /**
- *
+   TODO: 1)Find all strings with common prefix: Returns an array of strings which begin with the same prefix.
+   TODO: 2)Find predecessor: Locates the largest string less than a given string, by lexicographic order.
+   TODO: 3)Find successor: Locates the smallest string greater than a given string, by lexicographic order.
  */
 template < class KEY, class Alloc = std::allocator<KEY> >
 class patricia_tree
@@ -100,7 +102,7 @@ public:
                 }
                 new_node->position = match_node->key.size();
             }
-            if(new_pos == match_node->position){
+            if(static_cast<unsigned>(new_pos) == match_node->position){
                 new_node->position = match_node->position+1;
             }
         }else{
@@ -162,15 +164,15 @@ public:
         auto link = key.bit(match_node->position)? match_node->right : match_node->left;
         if(link != match_node){
             //match_node isn't external leaf. So we need to swap the node with the external leaf parent
-            auto first_parent = lookUp(root_node, k, [match_node](node_pointer node, node_pointer next){
+            auto grand_node = lookUp(root_node, k, [match_node](node_pointer node, node_pointer next){
                     return next == nullptr || next->position <= node->position
                            || next == match_node;
                 }).first;
 
-            if(key.bit(first_parent->position)) {
-                first_parent->right = parent_node;
+            if(key.bit(grand_node->position)) {
+                grand_node->right = parent_node;
             } else {
-                first_parent->left = parent_node;
+                grand_node->left = parent_node;
             }
 
             std::swap(parent_node->position, match_node->position);

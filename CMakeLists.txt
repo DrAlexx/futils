@@ -12,6 +12,8 @@ message(STATUS "Build type:" ${CMAKE_BUILD_TYPE})
 
 #Enable C++0x
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wc++11-compat -Wall -Wextra -pipe -fvisibility=hidden")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -flto -march=native -mtune=native")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -flto")
 
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIR})
