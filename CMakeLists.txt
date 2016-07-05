@@ -11,9 +11,11 @@ message(STATUS "Build type:" ${CMAKE_BUILD_TYPE})
 #list(REMOVE_DUPLICATES CMAKE_MODULE_PATH)
 
 #Enable C++0x
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wc++0x-compat -Wall -Wextra -pipe -fPIC -fvisibility=hidden")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wc++11-compat -Wall -Wextra -pipe -fvisibility=hidden")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -flto -march=native -mtune=native")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -flto")
 
-find_package(Boost 1.56 COMPONENTS unit_test_framework REQUIRED)
+find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIR})
 
 set(futil_UTIL_HEADERS

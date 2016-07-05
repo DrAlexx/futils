@@ -18,10 +18,15 @@ BOOST_AUTO_TEST_CASE( PatriciaTest )
     trie.insert("N");
     trie.insert("G");
 
-    std::string key_str("0");
-    utils::BitStreamAdaptor<std::string> bit_key(key_str);
-    std::cout << "bit_key=" << bit_key << std::endl;
-
+//    std::string str("SEARCHING");
+//    for(auto c : str) {
+//        std::string s(" ");
+//        s[0] = c;
+//        utils::BitStreamAdaptor<std::string> bits(s);
+//        std::cout << s << "=" << bits << std::endl;
+//    }
+    trie.erase("E");
+    trie.erase("A");
     trie.dump(std::cout);
 
     BOOST_CHECK( /*test_object.is_valid()*/ true);

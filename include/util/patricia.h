@@ -7,7 +7,9 @@
 #include "bitutil.h"
 
 /**
- *
+   TODO: 1)Find all strings with common prefix: Returns an array of strings which begin with the same prefix.
+   TODO: 2)Find predecessor: Locates the largest string less than a given string, by lexicographic order.
+   TODO: 3)Find successor: Locates the smallest string greater than a given string, by lexicographic order.
  */
 template < class KEY, class Alloc = std::allocator<KEY> >
 class patricia_tree
@@ -100,7 +102,7 @@ public:
                 }
                 new_node->position = match_node->key.size();
             }
-            if(new_pos == match_node->position){
+            if(static_cast<unsigned>(new_pos) == match_node->position){
                 new_node->position = match_node->position+1;
             }
         }else{
@@ -162,27 +164,38 @@ public:
         auto link = key.bit(match_node->position)? match_node->right : match_node->left;
         if(link != match_node){
             //match_node isn't external leaf. So we need to swap the node with the external leaf parent
-            std::swap(match_node->position, parent_node->position);
-            std::swap(match_node->left,     parent_node->left);
-            std::swap(match_node->right,    parent_node->right);
-            if(key.bit(match_node->position)){
-                match_node->right = match_node;
+            auto grand_node = lookUp(root_node, k, [match_node](node_pointer node, node_pointer next){
+                    return next == nullptr || next->position <= node->position
+                           || next == match_node;
+                }).first;
+
+            if(key.bit(grand_node->position)) {
+                grand_node->right = parent_node;
             } else {
-                match_node->left = match_node;
+                grand_node->left = parent_node;
+            }
+
+            std::swap(parent_node->position, match_node->position);
+
+            auto next = parent_node->right == match_node? parent_node->left : parent_node->right;
+            if(key.bit(parent_node->position)) {
+                parent_node->right = match_node;
+                parent_node->left  = match_node->left;
+            } else {
+                parent_node->left  = match_node;
+                parent_node->right = match_node->right;
+            }
+
+            if(key.bit(match_node->position)) {
+                match_node->right = match_node;
+                match_node->left  = next;
+            } else {
+                match_node->right = next;
+                match_node->left  = match_node;
             }
         }
 
-        //link a next after the match_node
-        auto next_link = key.bit(match_node->position)? match_node->left : match_node->right;
-        if(key.bit(parent_node->position)) {
-            parent_node->left = next_link;
-        } else {
-            parent_node->right = next_link;
-        }
-
-        //remove unlinked match_node
-        node_allocator.destroy(match_node);
-        node_allocator.deallocate(match_node, 1);
+        remove_leaf(parent_node, match_node);
     }
 
     void dump(std::ostream& os) {
@@ -255,4 +268,18 @@ private:
         visitor(start_node);
     }
 
+    void remove_leaf(node_pointer parent, node_pointer node)
+    {
+        BitStream key(node->key);
+        auto next_link = key.bit(node->position)? node->left : node->right;
+        if(key.bit(parent->position)) {
+            parent->right = next_link;
+        } else {
+            parent->left  = next_link;
+        }
+
+        //remove unlinked node
+        node_allocator.destroy(node);
+        node_allocator.deallocate(node, 1);
+    }
 };
