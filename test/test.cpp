@@ -1,4 +1,4 @@
-#include <util/patricia.h>
+#include <util/patricia_tree.h>
 #include <string>
 
 #define BOOST_TEST_MODULE PatriciaTest

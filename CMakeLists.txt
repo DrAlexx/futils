@@ -21,7 +21,9 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIR})
 set(futil_UTIL_HEADERS
   include/util/visibility.h
   include/util/bitutil.h
-  include/util/patricia.h
+  include/util/patricia_tree.h
+  include/util/patricia_set.h
+  include/util/patricia_map.h
   include/util/rlucache.h
 )
 
