@@ -16,11 +16,19 @@ public:
     template <typename K>
     struct SetValueType {
         SetValueType(const K& k)
-            :key(k){}
+            : key(k){}
+//        SetValueType(SetValueType&& v)
+//            : key(std::move(v.key)){}
         K key;
     };
     template <typename K, typename V>
     struct MapValueType {
+        MapValueType(const K& k, const V& v)
+            : key(k)
+            , value(v){}
+//        MapValueType(MapValueType&& v)
+//            : key(std::move(v.key))
+//            , value(std::move(v.value)){}
         K key;
         V value;
     };
@@ -63,13 +71,13 @@ private:
     typedef Node* node_pointer;
     typedef Node  node_type;
     using Node_alloc_type = Alloc<node_type>;
+
+    Node_alloc_type  node_allocator;
     node_pointer     root = nullptr;
     size_t           node_count = 0;
-    Node_alloc_type  node_allocator;
 
     static node_pointer rotate(node_pointer node, eRotation r);
 
-    void recursive_clear(node_pointer start_node);
     node_pointer recursive_insert(node_pointer node, const value_type& key);
     node_pointer recursive_erase(node_pointer node, const key_type& key);
 };
@@ -184,9 +192,12 @@ typename BinaryTree<Key, T, B, Alloc>::node_pointer BinaryTree<Key, T, B, Alloc>
               if (temp == nullptr) {
                   temp = node;
                   node = nullptr;
-              } else { // One child case
-                  //TODO: change links, no body copying?
-                  *node = *temp; // Copy the contents of
+              } else {
+                  // One child case. Copy temp node into node
+                  node->value = std::move(temp->value);
+                  node->links[0] = nullptr;
+                  node->links[1] = nullptr;
+                  B::update_node_info(node);
               }
               // the non-empty child
               node_allocator.destroy(temp);
@@ -202,7 +213,7 @@ typename BinaryTree<Key, T, B, Alloc>::node_pointer BinaryTree<Key, T, B, Alloc>
                   temp = temp->links[0];
 
               // Copy the inorder successor's data to this node
-              node->value.key = temp->value.key; //TODO: avoid copy
+              node->value = std::move(temp->value);
 
               // Delete the inorder successor
               root->links[1] = recursive_erase(node->links[1], temp->value.key);
@@ -213,13 +224,9 @@ typename BinaryTree<Key, T, B, Alloc>::node_pointer BinaryTree<Key, T, B, Alloc>
        if (node == nullptr)
          return node;
 
-       // STEP 2: UPDATE HEIGHT OF THE CURRENT NODE
        B::update_node_info(root);
-
-       // STEP 3: GET THE BALANCE FACTOR OF THIS NODE (to
        auto factor = B::get_balance_factor(node);
 
-       // If this node becomes unbalanced, then there are 4 cases
        if (factor > 1) {
            if (B::get_balance_factor(node->links[0]) >= 0) {
                // Left Left Case
@@ -248,24 +255,31 @@ typename BinaryTree<Key, T, B, Alloc>::node_pointer BinaryTree<Key, T, B, Alloc>
 template<typename Key, typename T, typename B, template<typename X> typename Alloc>
 void BinaryTree<Key, T, B, Alloc>::clear()
 {
-    recursive_clear(root);
+    auto node = root;
+    while (node != nullptr) {
+        if (node->links[0] != nullptr) {
+            node = node->links[0];
+            continue;
+        }
+        if (node->links[1] != nullptr) {
+            node = node->links[1];
+            continue;
+        }
+        auto up = node->up;
+        if(up != nullptr) {
+            if (up->links[0] == node) {
+                up->links[0] = nullptr;
+            } else if (up->links[1] == node) {
+                up->links[1] = nullptr;
+            }
+        }
+
+        node_allocator.destroy(node);
+        node_allocator.deallocate(node, 1);
+        node = up;
+    }
     root = nullptr;
     node_count = 0;
-}
-
-template<typename Key, typename T, typename B, template<typename X> typename Alloc>
-void BinaryTree<Key, T, B, Alloc>::recursive_clear(node_pointer start_node) {
-    if(start_node == nullptr)
-        return;
-
-    if(start_node->links[0] != nullptr)
-        recursive_clear(start_node->links[0]);
-
-    if(start_node->links[1] != nullptr)
-        recursive_clear(start_node->links[1]);
-
-    node_allocator.destroy(start_node);
-    node_allocator.deallocate(start_node, 1);
 }
 
 template<typename Key, typename T, typename B, template<typename X> typename Alloc>

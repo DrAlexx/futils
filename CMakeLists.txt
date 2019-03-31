@@ -58,13 +58,12 @@ set(futil_UTIL_HEADERS
   include/util/shardmap.h
   include/util/scoped_profiler.h
 
-#  include/util/patricia_tree.h
+  include/util/patricia_tree.h
 #  include/util/patricia_set.h
 #  include/util/patricia_map.h
 
   include/util/binary_tree.h
   include/util/avl_tree_balancer.h
-#  include/util/avltree_ext.h
 )
 
 #set(futil_UTIL_SOURCES src/scoped_profiler.cpp)
