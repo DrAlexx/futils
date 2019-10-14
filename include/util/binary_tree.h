@@ -3,6 +3,7 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <sstream>
 
 #include "avl_tree_balancer.h"
 
@@ -35,6 +36,53 @@ public:
     //Iteratots
     //TODO
 
+    void dump_tree (std::ostringstream& ss) const {
+        enum eDirection {
+            DIR_DOWN,
+            DIR_UP,
+        };
+        eDirection dir = DIR_DOWN;
+        ss << "digraph BST {\n";
+        auto node = root;
+        ss << "root -> {" << '"' << get_key(node->value) << '/' << (int)node->height << "\"}\n";
+        while (node != nullptr)
+        {
+            if (dir == DIR_DOWN) {
+                ss << '"' << get_key(node->value) << '/' << (int)node->height << "\" -> { " ;
+                if (node->up != nullptr) {
+                    ss << '"' << get_key(node->up->value) << '/' << (int)node->up->height << "\" ";
+                }
+                if (node->links[0] != nullptr) {
+                    ss << '"' << get_key(node->links[0]->value) << '/' << (int)node->links[0]->height << "\" ";
+                }
+                if (node->links[1] != nullptr) {
+                    ss << '"' << get_key(node->links[1]->value) << '/' << (int)node->links[1]->height << "\" ";
+                }
+                ss << "}\n";
+            } else {
+                if(node->up == nullptr)
+                    break;
+                if(node->up->links[0] == node) {
+                    dir = DIR_DOWN;
+                    node = node->up->links[1];
+                } else {
+                    node = node->up;
+                    dir = DIR_UP;
+                }
+                continue;
+            }
+
+            if(node->links[0] != nullptr) {
+                node = node->links[0];
+            } else if(node->links[1] != nullptr) {
+                node = node->links[1];
+            } else {
+                dir = DIR_UP;
+            }
+        }
+
+        ss << "}\n";
+    }
 private:
     struct Node : public balancer_type::NodeInfo {
         Node*       links[2] = {nullptr, nullptr};
@@ -59,9 +107,11 @@ private:
     size_t           node_count = 0;
 
     static node_pointer rotate(node_pointer node, eRotation r);
+    static std::tuple<node_pointer, node_pointer> find_node(node_pointer start_node, const key_type& key);
+    static node_pointer balance(node_pointer node, const key_type& key);
 
     //TODO: non-recursive insert/erase
-    node_pointer recursive_insert(node_pointer node, const value_type& key);
+//    node_pointer recursive_insert(node_pointer node, const value_type& key);
     node_pointer recursive_erase(node_pointer node, const key_type& key);
 
     static const key_type& get_key_impl(const value_type& v, std::true_type) {
@@ -87,8 +137,8 @@ BinaryTree<Key, T, B, Alloc>::~BinaryTree()
 }
 
 template<typename Key, typename T,  typename B, template<typename X> typename Alloc>
-typename BinaryTree<Key, T, B, Alloc>::node_pointer BinaryTree<Key, T, B, Alloc>::rotate(BinaryTree<Key, T, B, Alloc>::node_pointer node,
-                                                                             BinaryTree<Key, T, B, Alloc>::eRotation r)
+typename BinaryTree<Key, T, B, Alloc>::node_pointer
+BinaryTree<Key, T, B, Alloc>::rotate(BinaryTree<Key, T, B, Alloc>::node_pointer node, BinaryTree<Key, T, B, Alloc>::eRotation r)
 {
     auto new_root = node->links[1-r];
     auto other    = new_root->links[r];
@@ -108,57 +158,109 @@ typename BinaryTree<Key, T, B, Alloc>::node_pointer BinaryTree<Key, T, B, Alloc>
     return new_root;
 }
 
-template<typename Key, typename T, typename B, template<typename X> typename Alloc>
-void BinaryTree<Key, T, B, Alloc>::insert(const BinaryTree<Key, T, B, Alloc>::value_type& value)
-{
-    root = recursive_insert(root, value);
-    root->up = nullptr;
+template<typename Key, typename T,  typename B, template<typename X> typename Alloc>
+std::tuple<typename BinaryTree<Key, T, B, Alloc>::node_pointer, typename BinaryTree<Key, T, B, Alloc>::node_pointer>
+BinaryTree<Key, T, B, Alloc>::find_node(BinaryTree<Key, T, B, Alloc>::node_pointer root, const BinaryTree<Key, T, B, Alloc>::key_type& key) {
+    if (root == nullptr)
+        return std::make_tuple(nullptr, nullptr);
+
+    BinaryTree<Key, T, B, Alloc>::node_pointer parent{root};
+    BinaryTree<Key, T, B, Alloc>::node_pointer node{nullptr};
+
+    if(get_key(parent->value) == key)
+       return std::make_tuple(nullptr, parent);
+
+    do {
+        node = key < get_key(parent->value) ? parent->links[0] : parent->links[1];
+        if (node == nullptr)
+            break;
+        if (key == get_key(node->value))
+            return std::make_tuple(parent, node);
+        parent = node;
+    } while (true);
+
+    return std::make_tuple(parent, node);
 }
 
-template<typename Key, typename T, typename B, template<typename X> typename Alloc>
-typename BinaryTree<Key, T, B, Alloc>::node_pointer BinaryTree<Key, T, B, Alloc>::recursive_insert(typename BinaryTree<Key, T, B, Alloc>::node_pointer node, const value_type& value)
+template<typename Key, typename T,  typename B, template<typename X> typename Alloc>
+typename BinaryTree<Key, T, B, Alloc>::node_pointer
+BinaryTree<Key, T, B, Alloc>::balance(typename BinaryTree<Key, T, B, Alloc>::node_pointer node, const typename BinaryTree<Key, T, B, Alloc>::key_type& key)
 {
-    if(node == nullptr) {
-        //create a new node
-        auto new_node = node_allocator.allocate(1, 0);
-        node_allocator.construct(new_node, value);
-        ++node_count;
-        return new_node;
-    }
-
-    if(get_key(value) < get_key(node->value)) {
-        node->links[0] = recursive_insert(node->links[0], value);
-        node->links[0]->up = node;
-    } else if(get_key(value) > get_key(node->value)) {
-        node->links[1] = recursive_insert(node->links[1], value);
-        node->links[1]->up = node;
-    } else {
-        //already contains
-        return node;
-    }
-
-    balancer_type::update_node_info(node);
-
-    auto factor = balancer_type::get_balance_factor(node);
+    auto factor = BinaryTree<Key, T, B, Alloc>::balancer_type::get_balance_factor(node);
 
     if(factor > 1) {
-        if(get_key(value) < get_key(node->links[0]->value))
-            return rotate(node, BinaryTree<Key, T, B, Alloc>::ROTATION_RIGHT);
-        if(get_key(value) > get_key(node->links[0]->value)) {
+        if(key < get_key(node->links[0]->value)) {
+            node = rotate(node, BinaryTree<Key, T, B, Alloc>::ROTATION_RIGHT);
+        }
+        if(key > get_key(node->links[0]->value)) {
             node->links[0] = rotate(node->links[0], BinaryTree<Key, T, B, Alloc>::ROTATION_LEFT);
-            return rotate(node, BinaryTree<Key, T, B, Alloc>::ROTATION_RIGHT);
+            node = rotate(node, BinaryTree<Key, T, B, Alloc>::ROTATION_RIGHT);
         }
     }
 
     if(factor < -1) {
-        if(get_key(value) > get_key(node->links[1]->value))
-            return rotate(node, BinaryTree<Key, T, B, Alloc>::ROTATION_LEFT);
-        if(get_key(value) < get_key(node->links[1]->value)) {
+        if(key > get_key(node->links[1]->value)) {
+            node = rotate(node, BinaryTree<Key, T, B, Alloc>::ROTATION_LEFT);
+        }
+        if(key < get_key(node->links[1]->value)) {
             node->links[1] = rotate(node->links[1], BinaryTree<Key, T, B, Alloc>::ROTATION_RIGHT);
-            return rotate(node, BinaryTree<Key, T, B, Alloc>::ROTATION_LEFT);
+            node = rotate(node, BinaryTree<Key, T, B, Alloc>::ROTATION_LEFT);
         }
     }
+
     return node;
+}
+
+template<typename Key, typename T, typename B, template<typename X> typename Alloc>
+void BinaryTree<Key, T, B, Alloc>::insert(const BinaryTree<Key, T, B, Alloc>::value_type& value)
+{
+    const auto& key = get_key(value);
+
+    //STEP 1: search node
+    auto [parent, node] = find_node(root, key);
+    if(node != nullptr)
+        return; //Done when already contains
+
+    //STEP 2: Create a new node
+    auto new_node = node_allocator.allocate(1, 0);
+    node_allocator.construct(new_node, value);
+    ++node_count;
+    new_node->up = parent;
+
+    //STEP 3: Link a new node to the tree
+    if(parent != nullptr) {
+        if(key < get_key(parent->value))
+            parent->links[0] = new_node;
+        else
+            parent->links[1] = new_node;
+    } else {
+        root = new_node;
+        return;
+    }
+
+    //STEP 4: Get up and rebalance the tree
+    node = parent;
+    do {
+        BinaryTree<Key, T, B, Alloc>::balancer_type::update_node_info(node);
+        if(key < get_key(node->value)) {
+            node->links[0] = balance(node->links[0], key);
+            node->links[0]->up = node;
+        } else {
+            node->links[1] = balance(node->links[1], key);
+            node->links[1]->up = node;
+        }
+        BinaryTree<Key, T, B, Alloc>::balancer_type::update_node_info(node);
+        if (node->up == nullptr) {
+            BinaryTree<Key, T, B, Alloc>::balancer_type::update_node_info(node);
+            root = balance(node, key);
+            root->up = nullptr;
+            BinaryTree<Key, T, B, Alloc>::balancer_type::update_node_info(root);
+            return;
+        }
+        node = node->up;
+    } while (true);
+    BinaryTree<Key, T, B, Alloc>::balancer_type::update_node_info(node);
+    root = node;
 }
 
 template<typename Key, typename T, typename B, template<typename X> typename Alloc>
