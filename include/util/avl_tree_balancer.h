@@ -6,25 +6,16 @@
 
 class AVLTreeBalancer {
 public:
-    struct NodeInfo {
-        uint8_t height = 1;
+    class NodeInfo {
+    public:
+        //Possible values:
+        // -1 : tree is balanced
+        //  1 : left tree is higher
+        //  0 : right tree is higher
+        int8_t balance = -1;
+
+    public:
+        auto get_balance() const { return balance; }
+        bool is_balanced() const { return balance < 0; }
     };
-
-    inline static int get_node_height(const NodeInfo* node) {
-        if(node == nullptr)
-            return 0;
-        return node->height;
-    }
-
-    template <typename N, typename = typename std::enable_if<std::is_convertible<N,NodeInfo>::value>::type>
-    static int get_balance_factor(const N* node) {
-        return get_node_height(node->links[0]) - get_node_height(node->links[1]);
-    }
-
-    template <typename N, typename = typename std::enable_if<std::is_convertible<N,NodeInfo>::value>::type>
-    static void update_node_info(N* node) {
-        if(node == nullptr)
-            return;
-        node->height = std::max(get_node_height(node->links[0]), get_node_height(node->links[1]))+1;
-    }
 };
