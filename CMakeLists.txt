@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.9)
 project(futil)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
+enable_testing()
+
 message(STATUS "System: " ${CMAKE_SYSTEM_NAME} " " ${CMAKE_SYSTEM_VERSION})
 message(STATUS "Processor: " ${CMAKE_HOST_SYSTEM_PROCESSOR})
 message(STATUS "CMake generates: " ${CMAKE_GENERATOR})
@@ -71,11 +73,12 @@ set(futil_UTIL_HEADERS
 #add_executable(trie_test test/main.cpp test/test.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
 #target_link_libraries(trie_test ${Boost_LIBRARIES})
 
-add_executable(shardmap_test test/main.cpp test/shardmap.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
-target_link_libraries(shardmap_test ${Boost_LIBRARIES})
+#add_executable(shardmap_test test/main.cpp test/shardmap.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
+#target_link_libraries(shardmap_test ${Boost_LIBRARIES})
 
 add_executable(avl_tree_test test/main.cpp test/avl_tree.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
 target_link_libraries(avl_tree_test ${Boost_LIBRARIES})
+add_test(avl_tree ./avl_tree_test)
 
 #add_library(futil STATIC
 #    ${futil_UTIL_SOURCES}

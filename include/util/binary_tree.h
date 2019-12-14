@@ -27,7 +27,7 @@ public:
     //Modifiers
     bool insert(const value_type& value);
 //    void erase(const key_type& key);
-//    void clear();
+    void clear();
 
     //Const
     bool contains(const key_type& key) const;
@@ -36,6 +36,11 @@ public:
     template<typename F>
     void check_height_test(F check_height) const {
         recursive_check_height(root, check_height);
+    }
+    void dump_tree (std::ostringstream& ss) const {
+        ss << "digraph BST {\n";
+        recursive_dump(root, ss);
+        ss << "}\n";
     }
 private:
     struct Node : public balancer_type::NodeInfo {
@@ -62,6 +67,8 @@ private:
     size_t           node_count = 0;
 
     void create_node(node_pointer* parent_ptr, const value_type& key);
+    void recursive_clear(node_pointer start_node);
+
     static const key_type& get_key_impl(const value_type& v, std::true_type) {
         return v;
     }
@@ -86,11 +93,10 @@ private:
 
     //TODO: move to avl_balancer
     static node_pointer avl_rotate_2(node_pointer* path_top, int dir) {
-        node_pointer node_B, node_C, node_D, node_E;
-        node_B = *path_top;
-        node_D = node_B->links[dir];
-        node_C = node_D->links[1-dir];
-        node_E = node_D->links[dir];
+        auto node_B = *path_top;
+        auto node_D = node_B->links[dir];
+        auto node_C = node_D->links[1-dir];
+        auto node_E = node_D->links[dir];
 
         *path_top = node_D;
         node_D->links[1-dir] = node_B;
@@ -104,13 +110,12 @@ private:
 
     //TODO: move to avl_balancer
     static node_pointer avl_rotate_3(node_pointer* path_top, int dir, int third) {
-        node_pointer node_B, node_F, node_C, node_D, node_E;
-        node_B = *path_top;
-        node_F = node_B->links[dir];
-        node_D = node_F->links[1-dir];
-        /* note: C and E can be NULL */
-        node_C = node_D->links[1-dir];
-        node_E = node_D->links[dir];
+        auto node_B = *path_top;
+        auto node_F = node_B->links[dir];
+        auto node_D = node_F->links[1-dir];
+        /* note: C and E can be nullptr */
+        auto node_C = node_D->links[1-dir];
+        auto node_E = node_D->links[dir];
         *path_top = node_D;
         node_D->links[1-dir] = node_B;
         node_D->links[dir]   = node_F;
@@ -132,12 +137,28 @@ private:
         }
     }
 
+    //For testing
     template<typename F>
     static void recursive_check_height(node_pointer node, F check_height) {
         if (node == nullptr) return;
         recursive_check_height(node->links[0], check_height);
         recursive_check_height(node->links[1], check_height);
         check_height(node_type::get_height(node->links[0]), node_type::get_height(node->links[1]));
+    }
+
+    static void recursive_dump(node_pointer node, std::ostringstream& ss) {
+        if (node != nullptr) {
+            ss << '"' << get_key(node->value) << "\" -> { " ;
+            if (node->links[0] != nullptr) {
+                ss << '"' << get_key(node->links[0]->value) << "\" ";
+            }
+            if (node->links[1] != nullptr) {
+                ss << '"' << get_key(node->links[1]->value) << "\" ";
+            }
+            ss << "}\n";
+            recursive_dump(node->links[0], ss);
+            recursive_dump(node->links[1], ss);
+        }
     }
 };
 
@@ -148,7 +169,7 @@ BinaryTree<Key, T, B, Alloc>::BinaryTree()
 template<typename Key, typename T, typename B, template<typename X> typename Alloc>
 BinaryTree<Key, T, B, Alloc>::~BinaryTree()
 {
-    //clear();
+    clear();
 }
 
 template<typename Key, typename T, typename B, template<typename X> typename Alloc>
@@ -228,4 +249,27 @@ bool BinaryTree<Key, T, B, Alloc>::insert(const BinaryTree<Key, T, B, Alloc>::va
         path = path->links[direction];
     }
     return  true;
+}
+
+template<typename Key, typename T, typename B, template<typename X> typename Alloc>
+void BinaryTree<Key, T, B, Alloc>::clear()
+{
+    recursive_clear(root);
+    root = nullptr;
+    node_count = 0;
+}
+
+template<typename Key, typename T, typename B, template<typename X> typename Alloc>
+void BinaryTree<Key, T, B, Alloc>::recursive_clear(node_pointer start_node) {
+    if(start_node == nullptr)
+        return;
+
+    if(start_node->links[0] != nullptr)
+        recursive_clear(start_node->links[0]);
+
+    if(start_node->links[1] != nullptr)
+        recursive_clear(start_node->links[1]);
+
+    node_allocator.destroy(start_node);
+    node_allocator.deallocate(start_node, 1);
 }

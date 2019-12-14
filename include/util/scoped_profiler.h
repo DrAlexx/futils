@@ -107,6 +107,13 @@ public:
             f(info->name, info->call_count.load(), info->cumulative_time_us.load());
         }
     }
+
+    void reset() {
+        for(auto* info : info_array) {
+            info->call_count = 0;
+            info->cumulative_time_us = 0;
+        }
+    }
 private:
     std::vector<Info*> info_array;
 };
