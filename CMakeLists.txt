@@ -65,7 +65,6 @@ set(futil_UTIL_HEADERS
 #  include/util/patricia_map.h
 
   include/util/binary_tree.h
-  include/util/avl_tree_balancer.h
 )
 
 #set(futil_UTIL_SOURCES src/scoped_profiler.cpp)
