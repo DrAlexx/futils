@@ -2,81 +2,80 @@
 
 #include <atomic>
 #include <chrono>
-#include <string>
+#include <string_view>
 #include <vector>
 
 /**
- * ScopedProfiler is a small header-only library for measuring execution time of your program elements.
- * The library is required C++17 compiler and C++ standard library only. Time measurment is based on std::high_resolution_clock.
- * Every measurment point @see ScopedPoint has a uniqe name and two values:
- *  - call_cout is a number of calls for this point
- *  - cumulative_time_us is a sum of execution time for all calls.
- * You can get average exection time per a call via the equation cumulative_time_us/call_cout.
+ * ScopedProfiler is a small one-header library for measuring of the execution time of your program elements.
+ * The library is required C++17 compiler and C++ standard library only. The time measurement is based on @see std::high_resolution_clock.
+ * Every measurement point has an unique name and two values:
+ *  - call_count is a number of calls for this point
+ *  - cumulative_time_us is a sum of execution time for all calls in us.
+ * You can get an average execution time per a call via the equation cumulative_time_us/call_count.
  *
  * How to use:
- * Create ScopedProfiler::Manager instance. This in a collection of mesurment points.
- * Create ScopedProfiler::ScopedPoint instance in the scope where you want to measure time.
- * ScopedProfiler::ScopedPoint is an template class that have to be specialized with the help of m
- * ScopedProfiler::Manager instance and point name.
- * @note ScopedProfiler::Manager instance have to be global.
- * @note point name must be a static const char.
- * @note also point name should be unique inside manager instance in oherwise different point shoul share one data record inside a manager.
+ * Create @see Manager instance. This is a collection of measurement points.
+ * Create @see ScopedPoint instance in the scope where you want to measure time.
+ * @see ScopedPoint is an template class that have to be specialized with the help of @see Manager instance and point name.
+ * @note Manager instance must be global.
+ * @note point name must be a 'static const char'. Also point name must be unique inside manager instance.
  *
  * Multithreading is supported with some exceptions:
- *  - Any measurment point @see ScopedPoint is thread safe and hasn't got any kind of locks inside.
- *    All synchronization is based on atomics.
- *  - Reading measurments @see Manager::for_each_point info hasn't got any locks but can read non-consistent data.
- *    It is possible when call_count is already updated and cumulative_time_us isn't yet. I won't to fix it since strict synhronization kills perfomance :)
+ *  - Any measurement point @see ScopedPoint is thread safe and hasn't got any kind of locks inside.
+ *    All synchronization is based on atomics, so the time measurement doesn't take a lot of time.
+ *  - @see Manager::for_each_point can be called in any time but when some point is updating his own state it can provide the inconsistent data.
+ *    (but no crash or memory corruption here)
+ *    It will be a good idea to divide the time measurement and data statistic processing. But it's not a strict requirement.
+ *  - @see Manager::reset is completely not thread-safe. If you definitely want to reset all data you must ensure that any points don't change the data in the same time.
+ *    (but no crash or memory corruption here)
  *
  * @example
- * #include <cout>
  * #include <scoped_profiler.h>
- * using namespace ScopedProfiler;
- * Manager mgr;
+ * #include <ostream>
+ *
+ * ScopedProfiler::Manager mgr;
  *
  * void foo() {
- *  static const char point_name[] = "Function foo";
- *  ScopedPoint<mgr, point_name>    my_point;
+ *     static const char point_name[] = "Function foo";
+ *     ScopedProfiler::ScopedPoint<mgr, point_name>    my_foo_point;
  *
- *  //do something here
+ *     //do something here
  * };
  *
  * int main(int argc, char** argv) {
- *  {
- *      static const char point_name[] = "anon scope in main";
- *      ScopedPoint<mgr, point_name>    my_point;
+ *     {
+ *         static const char point_name[] = "anon scope in main";
+ *         ScopedProfiler::ScopedPoint<mgr, point_name>    my_anon_point;
  *
- *      //do something;
- *  }
- *  foo();
+ *         //do something;
  *
- *  //print results
- *  mgr.for_each_point([](const char* name, uint64_t call_count, uint64_t cumulative_time_us){
- *      std::cout << "Point: " << name << "count: " << call_count << "cumulative_time: " << cumulative_time_us << "us" << std::endl;
- *  });
- *  return 0;
+ *     }
+ *
+ *     //print results
+ *     mgr.for_each_point([](const char* name, uint64_t call_count, uint64_t cumulative_time_us){
+ *         std::cout << "Point: " << name << "count: " << call_count << "cumulative_time: " << cumulative_time_us << "us" << std::endl;
+ *     });
+ *     return 0;
  * }
  */
 
 namespace ScopedProfiler {
 
-using namespace std::chrono;
-
 class Manager;
 
 /**
- * @brief The Info struct contains a measurment named data.
+ * @brief The Info struct contains the measurement named data.
+ * You don't need to use it directly
  */
-struct Info
-{
+struct Info {
     /**
-     * @brief Info Initialize an instance and stores record pointer into given manager by given
-     * Isn't a sence to have an Info instance that isn't registared in a Manager.
+     * @brief Info initializes an instance and stores Info pointer into the given manager by the given name
+     * There is no point to have the Info instance which is not registared in the Manager.
      * @param mgr Manager for this info instance
-     * @param name is uniq name for this Info instance
+     * @param name is unique name for this Info instance
      */
     Info(Manager& mgr, const char* name);
-    const std::string           name;
+    const std::string_view      name;
     std::atomic_uint_fast64_t   call_count         = 0;
     std::atomic_uint_fast64_t   cumulative_time_us = 0;
 };
@@ -85,12 +84,12 @@ struct Info
  * @brief The Manager class is a collection of  @see ScopedPoint.
  * @note The Manager instance must be a global variable.
  */
-class Manager
-{
+class Manager {
 public:
     /**
-     * @brief AddInfo stores Info struct address inside a manager.
-     *  The Info struct instance is placed outside in a ScopedPoint instance
+     * @brief AddInfo stores the Info struct address inside the manager.
+     *  The Info struct instance is placed outside in a ScopedPoint instance.
+     *  You don't need to call it directly
      * @param info
      */
     void AddInfo(Info* info) {
@@ -98,8 +97,10 @@ public:
     }
 
     /**
-     * for_each_point is an enumerator that calls functor f for every registered Info record.
-     * It can be used for retreiving measured data.
+     * for_each_point is an enumerator that calls the functor f for every ScopedPoint which is linked to the Manager.
+     * This method can be called in any time but when some point is updating his own state it can provide the inconsistent data.
+     * (but no crash or memory corruption here)
+     * @param f is a functor with the next signature f(const std::string_view name, uint64_t call_count, uint64_t cumulative_time_us)
      */
     template<typename F>
     void for_each_point(F f) {
@@ -108,24 +109,30 @@ public:
         }
     }
 
+    /**
+     * @brief reset cleans all call counters and cumulative time counters.
+     * This method is completely not thread-safe. If you definitely want to reset all data you must ensure that any points don't change the data in the same time.
+     * (but no crash or memory corruption here)
+     */
     void reset() {
         for(auto* info : info_array) {
             info->call_count = 0;
             info->cumulative_time_us = 0;
         }
     }
+
 private:
     std::vector<Info*> info_array;
 };
 
 Info::Info(Manager& mgr, const char* str)
-    :name(str){
+    : name(str) {
     mgr.AddInfo(this);
 }
 
 /**
- * ScopedPoint class is one time measurment point.
- * You do no not need start/stop methods since start is an creation of the ScopedPoint
+ * ScopedPoint class is the time measurement point.
+ * You don't need to start/stop methods since start is an creation of the ScopedPoint
  * and stop is an destruction of the ScopedPoint instance.
  * The class has two template parameters:
  * mgr  - is global variable of Manager type since every point have to be restered in some manager.
@@ -134,16 +141,18 @@ Info::Info(Manager& mgr, const char* str)
 template <Manager& mgr, const char* name>
 class ScopedPoint {
 public:
+    using clock = std::chrono::high_resolution_clock;
     ScopedPoint() {
-        start = high_resolution_clock::now();
+        start = clock::now();
     }
     ~ScopedPoint(){
-        auto end = high_resolution_clock::now();
+        auto end = clock::now();
         info.cumulative_time_us += std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
         info.call_count++;
     }
+
 private:
-    high_resolution_clock::time_point start;
+    clock::time_point start;
     static inline Info info = Info(mgr, name);
 };
 

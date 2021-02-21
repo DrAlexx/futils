@@ -9,9 +9,6 @@ message(STATUS "Processor: " ${CMAKE_HOST_SYSTEM_PROCESSOR})
 message(STATUS "CMake generates: " ${CMAKE_GENERATOR})
 message(STATUS "Build type:" ${CMAKE_BUILD_TYPE})
 
-#list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
-#list(REMOVE_DUPLICATES CMAKE_MODULE_PATH)
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wc++17-compat -Wall -Wextra -pipe -fno-rtti -fvisibility=hidden")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pipe -fvisibility=hidden")
 
@@ -24,8 +21,8 @@ set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s ")
 
 if(WIN32)
   add_definitions(-D_WIN32)
-  set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O2 -march=pentium4 -mtune=pentium4 ")
-  set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG -O2 -march=pentium4 -mtune=pentium4 ")
+  set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O2 ")
+  set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG -O2 ")
   set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} ")
   set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
 else(WIN32)
@@ -78,6 +75,10 @@ set(futil_UTIL_HEADERS
 add_executable(avl_tree_test test/main.cpp test/avl_tree.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
 target_link_libraries(avl_tree_test ${Boost_LIBRARIES})
 add_test(avl_tree ./avl_tree_test)
+
+add_executable(scoped_profiler_test test/main.cpp test/scoped_profiler.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
+target_link_libraries(scoped_profiler_test ${Boost_LIBRARIES})
+add_test(scoped_profiler ./scoped_profiler_test)
 
 #add_library(futil STATIC
 #    ${futil_UTIL_SOURCES}
