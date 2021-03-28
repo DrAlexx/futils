@@ -1,11 +1,12 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <sstream>
 
-template<typename Key, typename T = void, template<typename X> typename Alloc = std::allocator>
+template<typename Key, typename T = void, typename Compare = std::less<Key>, template<typename X> typename Alloc = std::allocator>
 class BinaryTree
 {
 public:
@@ -52,7 +53,8 @@ private:
         bool is_balanced() const { return balance < 0; }
 
         int get_direction(const key_type& key) {
-            return key < get_key(value)? 0 : 1;
+            //return key < get_key(value)? 0 : 1;
+            return Compare{}(key, value)? 0 : 1;
         }
         auto get_next(const key_type& key) {
             return links[get_direction(key)];
@@ -164,38 +166,38 @@ private:
     }
 };
 
-template<typename Key, typename T, template<typename X> typename Alloc>
-BinaryTree<Key, T, Alloc>::BinaryTree()
+template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+BinaryTree<Key, T, Compare, Alloc>::BinaryTree()
 {}
 
-template<typename Key, typename T, template<typename X> typename Alloc>
-BinaryTree<Key, T, Alloc>::~BinaryTree()
+template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+BinaryTree<Key, T, Compare, Alloc>::~BinaryTree()
 {
     clear();
 }
 
-template<typename Key, typename T, template<typename X> typename Alloc>
-void BinaryTree<Key, T, Alloc>::create_node(BinaryTree<Key, T, Alloc>::node_pointer* parent_ptr, const BinaryTree<Key, T, Alloc>::value_type& value) {
+template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+void BinaryTree<Key, T, Compare, Alloc>::create_node(BinaryTree<Key, T, Compare, Alloc>::node_pointer* parent_ptr, const BinaryTree<Key, T, Compare, Alloc>::value_type& value) {
     auto new_node = node_allocator.allocate(1, 0);
     node_allocator.construct(new_node, value);
     ++node_count;
     *parent_ptr = new_node;
 }
 
-template<typename Key, typename T, template<typename X> typename Alloc>
-bool BinaryTree<Key, T, Alloc>::contains(const BinaryTree<Key, T, Alloc>::key_type& key) const
+template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+bool BinaryTree<Key, T, Compare, Alloc>::contains(const BinaryTree<Key, T, Compare, Alloc>::key_type& key) const
 {
-    return BinaryTree<Key, T, Alloc>::lookup(root, key) != nullptr;
+    return BinaryTree<Key, T, Compare, Alloc>::lookup(root, key) != nullptr;
 }
 
-template<typename Key, typename T, template<typename X> typename Alloc>
-size_t BinaryTree<Key, T, Alloc>::size() const
+template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+size_t BinaryTree<Key, T, Compare, Alloc>::size() const
 {
     return node_count;
 }
 
-template<typename Key, typename T, template<typename X> typename Alloc>
-bool BinaryTree<Key, T, Alloc>::insert(const BinaryTree<Key, T, Alloc>::value_type& value)
+template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+bool BinaryTree<Key, T, Compare, Alloc>::insert(const BinaryTree<Key, T, Compare, Alloc>::value_type& value)
 {
     //Stage 1. Find a position in the tree and link a new node
     // by the way find and remember a node where the tree starts to be unbalanced.
@@ -253,8 +255,8 @@ bool BinaryTree<Key, T, Alloc>::insert(const BinaryTree<Key, T, Alloc>::value_ty
     return  true;
 }
 
-template<typename Key, typename T, template<typename X> typename Alloc>
-bool BinaryTree<Key, T, Alloc>::erase(const BinaryTree<Key, T, Alloc>::key_type& key)
+template<typename Key, typename T, typename Compare,template<typename X> typename Alloc>
+bool BinaryTree<Key, T, Compare, Alloc>::erase(const BinaryTree<Key, T, Compare, Alloc>::key_type& key)
 {
     //Stage 1. lookup for the node that contain a key
     auto node                  = root;
@@ -334,16 +336,16 @@ bool BinaryTree<Key, T, Alloc>::erase(const BinaryTree<Key, T, Alloc>::key_type&
     return true;
 }
 
-template<typename Key, typename T, template<typename X> typename Alloc>
-void BinaryTree<Key, T, Alloc>::clear()
+template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+void BinaryTree<Key, T, Compare, Alloc>::clear()
 {
     recursive_clear(root);
     root = nullptr;
     node_count = 0;
 }
 
-template<typename Key, typename T, template<typename X> typename Alloc>
-void BinaryTree<Key, T, Alloc>::recursive_clear(node_pointer start_node) {
+template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+void BinaryTree<Key, T, Compare, Alloc>::recursive_clear(node_pointer start_node) {
     if(start_node == nullptr)
         return;
 
