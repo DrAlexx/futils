@@ -52,6 +52,8 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIR})
 
 set(futil_UTIL_HEADERS
   include/util/visibility.h
+  include/util/type_utils.h
+  include/util/const_pool.h
   include/util/bitutil.h
   include/util/rlucache.h
   include/util/shardmap.h
@@ -79,6 +81,10 @@ add_test(avl_tree ./avl_tree_test)
 add_executable(scoped_profiler_test test/main.cpp test/scoped_profiler.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
 target_link_libraries(scoped_profiler_test ${Boost_LIBRARIES})
 add_test(scoped_profiler ./scoped_profiler_test)
+
+add_executable(const_pool_test test/main.cpp test/const_pool.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
+target_link_libraries(const_pool_test ${Boost_LIBRARIES})
+add_test(const_pool_test ./const_pool_test_test)
 
 #add_library(futil STATIC
 #    ${futil_UTIL_SOURCES}
