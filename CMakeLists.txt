@@ -50,7 +50,7 @@ endif(WIN32)
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIR})
 
-set(futil_UTIL_HEADERS
+set(futil_HEADERS
   include/util/visibility.h
   include/util/type_utils.h
   include/util/const_pool.h
@@ -59,11 +59,8 @@ set(futil_UTIL_HEADERS
   include/util/shardmap.h
   include/util/scoped_profiler.h
 
-  include/util/patricia_tree.h
-#  include/util/patricia_set.h
-#  include/util/patricia_map.h
-
-  include/util/binary_tree.h
+  include/util/patricia_trie/patricia_trie.h
+  include/util/binary_tree/binary_tree.h
 )
 
 #set(futil_UTIL_SOURCES src/scoped_profiler.cpp)
@@ -74,15 +71,15 @@ set(futil_UTIL_HEADERS
 #add_executable(shardmap_test test/main.cpp test/shardmap.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
 #target_link_libraries(shardmap_test ${Boost_LIBRARIES})
 
-add_executable(avl_tree_test test/main.cpp test/avl_tree.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
+add_executable(avl_tree_test test/main.cpp test/avl_tree.cpp ${futil_HEADERS} ${futil_SOURCES})
 target_link_libraries(avl_tree_test ${Boost_LIBRARIES})
 add_test(avl_tree ./avl_tree_test)
 
-add_executable(scoped_profiler_test test/main.cpp test/scoped_profiler.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
+add_executable(scoped_profiler_test test/main.cpp test/scoped_profiler.cpp ${futil_HEADERS} ${futil_SOURCES})
 target_link_libraries(scoped_profiler_test ${Boost_LIBRARIES})
 add_test(scoped_profiler ./scoped_profiler_test)
 
-add_executable(const_pool_test test/main.cpp test/const_pool.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
+add_executable(const_pool_test test/main.cpp test/const_pool.cpp ${futil_HEADERS} ${futil_SOURCES})
 target_link_libraries(const_pool_test ${Boost_LIBRARIES})
 add_test(const_pool_test ./const_pool_test_test)
 

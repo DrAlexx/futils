@@ -1,5 +1,5 @@
 
-#include <util/binary_tree.h>
+#include <binary_tree/binary_tree.h>
 
 
 #define BOOST_TEST_MODULE Binary_Tree
