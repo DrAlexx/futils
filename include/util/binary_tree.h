@@ -6,7 +6,8 @@
 #include <utility>
 #include <sstream>
 
-template<typename Key, typename T = void, typename Compare = std::less<Key>, template<typename X> typename Alloc = std::allocator>
+template<typename Key, typename T = void, typename Compare = std::less<Key>,
+         template<typename X> typename Alloc = std::allocator>
 class BinaryTree
 {
 public:
@@ -22,15 +23,25 @@ public:
     BinaryTree();
     ~BinaryTree();
 
+    //Capacity
+    bool empty() const noexcept;
+    size_t size() const noexcept;
+    size_t max_size() const noexcept;
+
     //Modifiers
     bool insert(const value_type& value);
-    bool erase(const key_type& key);
+    size_t erase(const key_type& key);
+    void swap(BinaryTree<Key, T, Compare, Alloc>& other);
     void clear();
+//    template <class... Args>
+//    bool emplace (Args&&... args);
 
-    //Const
-    bool contains(const key_type& key) const;
-    size_t size() const;
+    //Operations
+    size_t count(const key_type& key) const;
+    template <typename F>
+    void enumerate(F f);
 
+    //Test & debug
     template<typename F>
     void check_height_test(F check_height) const {
         recursive_check_height(root, check_height);
@@ -53,7 +64,6 @@ private:
         bool is_balanced() const { return balance < 0; }
 
         int get_direction(const key_type& key) {
-            //return key < get_key(value)? 0 : 1;
             return Compare{}(key, value)? 0 : 1;
         }
         auto get_next(const key_type& key) {
@@ -77,7 +87,8 @@ private:
     size_t           node_count = 0;
 
     void create_node(node_pointer* parent_ptr, const value_type& key);
-    void recursive_clear(node_pointer start_node);
+    template <typename F>
+    void recursive_enumerate(node_pointer start_node, F f);
 
     static const key_type& get_key_impl(const value_type& v, std::true_type) {
         return v;
@@ -185,15 +196,30 @@ void BinaryTree<Key, T, Compare, Alloc>::create_node(BinaryTree<Key, T, Compare,
 }
 
 template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
-bool BinaryTree<Key, T, Compare, Alloc>::contains(const BinaryTree<Key, T, Compare, Alloc>::key_type& key) const
-{
-    return BinaryTree<Key, T, Compare, Alloc>::lookup(root, key) != nullptr;
+bool BinaryTree<Key, T, Compare, Alloc>::empty() const noexcept {
+    return size() == 0;
 }
 
 template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
-size_t BinaryTree<Key, T, Compare, Alloc>::size() const
-{
+size_t BinaryTree<Key, T, Compare, Alloc>::size() const noexcept {
     return node_count;
+}
+
+template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+size_t BinaryTree<Key, T, Compare, Alloc>::max_size() const noexcept {
+    return std::numeric_limits<size_t>::max()/sizeof(typename BinaryTree<Key, T, Compare, Alloc>::node_type);
+}
+
+template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+size_t BinaryTree<Key, T, Compare, Alloc>::count(const BinaryTree<Key, T, Compare, Alloc>::key_type& key) const
+{
+    return BinaryTree<Key, T, Compare, Alloc>::lookup(root, key) == nullptr? 0 : 1;
+}
+
+template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+template <typename F>
+void BinaryTree<Key, T, Compare, Alloc>::enumerate(F f) {
+
 }
 
 template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
@@ -256,7 +282,7 @@ bool BinaryTree<Key, T, Compare, Alloc>::insert(const BinaryTree<Key, T, Compare
 }
 
 template<typename Key, typename T, typename Compare,template<typename X> typename Alloc>
-bool BinaryTree<Key, T, Compare, Alloc>::erase(const BinaryTree<Key, T, Compare, Alloc>::key_type& key)
+size_t BinaryTree<Key, T, Compare, Alloc>::erase(const BinaryTree<Key, T, Compare, Alloc>::key_type& key)
 {
     //Stage 1. lookup for the node that contain a key
     auto node                  = root;
@@ -278,7 +304,7 @@ bool BinaryTree<Key, T, Compare, Alloc>::erase(const BinaryTree<Key, T, Compare,
         node = *nodep;
     }
     if (targetp == nullptr)
-        return false; //key not found nothing to remove
+        return 0; //key not found nothing to remove
         
     /* 
      * Stage 2.
@@ -333,28 +359,38 @@ bool BinaryTree<Key, T, Compare, Alloc>::erase(const BinaryTree<Key, T, Compare,
     node_allocator.deallocate(targetn, 1);
     --node_count;
 
-    return true;
+    return 1;
+}
+
+template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+void BinaryTree<Key, T, Compare, Alloc>::swap(BinaryTree<Key, T, Compare, Alloc>& other) {
+    std::swap(node_count, other.node_count);
+    std::swap(root, other.root);
 }
 
 template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
 void BinaryTree<Key, T, Compare, Alloc>::clear()
 {
-    recursive_clear(root);
+    recursive_enumerate(root, [this](auto* node){
+        node_allocator.destroy(node);
+        node_allocator.deallocate(node, 1);
+    });
+
     root = nullptr;
     node_count = 0;
 }
 
-template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
-void BinaryTree<Key, T, Compare, Alloc>::recursive_clear(node_pointer start_node) {
+template <typename Key, typename T, typename Compare, template<typename X> typename Alloc>
+template <typename F>
+void BinaryTree<Key, T, Compare, Alloc>::recursive_enumerate(node_pointer start_node, F f) {
     if(start_node == nullptr)
         return;
 
     if(start_node->links[0] != nullptr)
-        recursive_clear(start_node->links[0]);
+        recursive_enumerate(start_node->links[0], f);
 
     if(start_node->links[1] != nullptr)
-        recursive_clear(start_node->links[1]);
+        recursive_enumerate(start_node->links[1], f);
 
-    node_allocator.destroy(start_node);
-    node_allocator.deallocate(start_node, 1);
+    f(start_node);
 }

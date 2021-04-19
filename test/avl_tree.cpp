@@ -19,10 +19,10 @@ BOOST_AUTO_TEST_CASE(AVL_Tree)
 
     //Insert
     for(auto i = FIRST; i <= LAST; ++i) {
-        BOOST_REQUIRE(!avl_tree.contains(i));
+        BOOST_REQUIRE(avl_tree.count(i) == 0);
         BOOST_REQUIRE(avl_tree.insert(i));
         BOOST_REQUIRE(!avl_tree.insert(i));
-        BOOST_REQUIRE(avl_tree.contains(i));
+        BOOST_REQUIRE(avl_tree.count(i) == 1);
         BOOST_REQUIRE_EQUAL(avl_tree.size(), ++size);
         avl_tree.check_height_test([](int hl, int hr){
             BOOST_REQUIRE(std::abs(hl-hr) <= 1);
@@ -30,20 +30,20 @@ BOOST_AUTO_TEST_CASE(AVL_Tree)
     }
 
     //Contains
-    BOOST_REQUIRE(!avl_tree.contains(FIRST - 1));
-    BOOST_REQUIRE(!avl_tree.contains(LAST  + 1));
-    BOOST_REQUIRE(!avl_tree.contains(LAST*2));
-    BOOST_REQUIRE(!avl_tree.contains(FIRST*2));
+    BOOST_REQUIRE(avl_tree.count(FIRST - 1) == 0);
+    BOOST_REQUIRE(avl_tree.count(LAST  + 1) == 0);
+    BOOST_REQUIRE(avl_tree.count(LAST*2) == 0);
+    BOOST_REQUIRE(avl_tree.count(FIRST*2) == 0);
     for(auto i = FIRST; i <= LAST ; ++i) {
-        BOOST_REQUIRE(avl_tree.contains(i));
+        BOOST_REQUIRE(avl_tree.count(i) == 1);
     }
 
     //Erase
     size = avl_tree.size();
     for(auto i = FIRST; i <= LAST; ++i) {
-        BOOST_REQUIRE(avl_tree.contains(i));
+        BOOST_REQUIRE(avl_tree.count(i) == 1);
         BOOST_REQUIRE(avl_tree.erase(i));
-        BOOST_REQUIRE(!avl_tree.contains(i));
+        BOOST_REQUIRE(avl_tree.count(i) == 0);
         BOOST_REQUIRE(!avl_tree.erase(i));
         BOOST_REQUIRE_EQUAL(avl_tree.size(), --size);
         avl_tree.check_height_test([](int hl, int hr){
