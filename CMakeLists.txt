@@ -9,7 +9,7 @@ message(STATUS "Processor: " ${CMAKE_HOST_SYSTEM_PROCESSOR})
 message(STATUS "CMake generates: " ${CMAKE_GENERATOR})
 message(STATUS "Build type:" ${CMAKE_BUILD_TYPE})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wc++17-compat -Wall -Wextra -pipe -fno-rtti -fvisibility=hidden")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -Wc++20-compat -Wall -Wextra -pipe -fno-rtti -fvisibility=hidden")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pipe -fvisibility=hidden")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-ggdb -O0 -fno-omit-frame-pointer")
@@ -47,6 +47,29 @@ else(WIN32)
   endif(USE_BINUTILS_WORKAROUND)
 endif(WIN32)
 
+#option(BUILD_DOC "Build documentation" ON)
+
+#find_package(Doxygen)
+#if (DOXYGEN_FOUND)
+#    # set input and output files
+##    set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
+##    set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+#    set(DOXYGEN_OUT ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile)
+
+#    # request to configure the file
+#    # configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+#    message("Doxygen build started")
+
+#    # note the option ALL which allows to build the docs together with the application
+#    add_custom_target( doc_doxygen ALL
+#        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+#        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+#        COMMENT "Generating API documentation with Doxygen"
+#        VERBATIM )
+#else (DOXYGEN_FOUND)
+#  message("Doxygen need to be installed to generate the doxygen documentation")
+#endif (DOXYGEN_FOUND)
+
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIR})
 
@@ -59,8 +82,10 @@ set(futil_HEADERS
   include/util/shardmap.h
   include/util/scoped_profiler.h
 
-  include/util/patricia_trie/patricia_trie.h
-  include/util/binary_tree/binary_tree.h
+  include/patricia_trie/patricia_trie.h
+  include/binary_tree/binary_tree.h
+
+  include/huffman/huffman.h
 )
 
 #set(futil_UTIL_SOURCES src/scoped_profiler.cpp)

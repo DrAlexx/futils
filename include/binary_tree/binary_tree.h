@@ -189,8 +189,8 @@ BinaryTree<Key, T, Compare, Alloc>::~BinaryTree()
 
 template<typename Key, typename T, typename Compare, template<typename X> typename Alloc>
 void BinaryTree<Key, T, Compare, Alloc>::create_node(BinaryTree<Key, T, Compare, Alloc>::node_pointer* parent_ptr, const BinaryTree<Key, T, Compare, Alloc>::value_type& value) {
-    auto new_node = node_allocator.allocate(1, 0);
-    node_allocator.construct(new_node, value);
+    auto new_node = node_allocator.allocate(1);
+    std::allocator_traits<Node_alloc_type>::construct(node_allocator, new_node, value);
     ++node_count;
     *parent_ptr = new_node;
 }
@@ -355,7 +355,7 @@ size_t BinaryTree<Key, T, Compare, Alloc>::erase(const BinaryTree<Key, T, Compar
     tree->links[0] = targetn->links[0];
     tree->links[1] = targetn->links[1];
     tree->balance  = targetn->balance;
-    node_allocator.destroy(targetn);
+    std::allocator_traits<Node_alloc_type>::destroy(node_allocator, targetn);
     node_allocator.deallocate(targetn, 1);
     --node_count;
 
@@ -372,7 +372,7 @@ template<typename Key, typename T, typename Compare, template<typename X> typena
 void BinaryTree<Key, T, Compare, Alloc>::clear()
 {
     recursive_enumerate(root, [this](auto* node){
-        node_allocator.destroy(node);
+        std::allocator_traits<Node_alloc_type>::destroy(node_allocator, node);
         node_allocator.deallocate(node, 1);
     });
 
