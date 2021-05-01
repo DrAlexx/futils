@@ -10,7 +10,7 @@ BOOST_AUTO_TEST_SUITE(Binary_Tree)
 BOOST_AUTO_TEST_CASE(AVL_Tree)
 {
     using KEY_TYPE = int;
-    BinaryTree<KEY_TYPE>  avl_tree;
+    binary_tree::tree<KEY_TYPE>  avl_tree;
     constexpr KEY_TYPE FIRST = -1000;
     constexpr KEY_TYPE LAST  = 1000;
     BOOST_REQUIRE(FIRST < LAST);

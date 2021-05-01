@@ -83,9 +83,10 @@ set(futil_HEADERS
   include/util/scoped_profiler.h
 
   include/patricia_trie/patricia_trie.h
-  include/binary_tree/binary_tree.h
 
-  include/huffman/huffman.h
+  include/binary_tree/base.h
+  include/binary_tree/binary_tree.h
+  include/binary_tree/avl_balancer.h
 )
 
 #set(futil_UTIL_SOURCES src/scoped_profiler.cpp)
@@ -106,7 +107,7 @@ add_test(scoped_profiler ./scoped_profiler_test)
 
 add_executable(const_pool_test test/main.cpp test/const_pool.cpp ${futil_HEADERS} ${futil_SOURCES})
 target_link_libraries(const_pool_test ${Boost_LIBRARIES})
-add_test(const_pool_test ./const_pool_test_test)
+add_test(const_pool_test ./const_pool_test)
 
 #add_library(futil STATIC
 #    ${futil_UTIL_SOURCES}
