@@ -84,7 +84,7 @@ struct Info {
     std::atomic_uint_fast64_t   cumulative_time_us = 0;
 };
 
-/** @ingroup ScopedProfiler
+/** @ingroup ScopedProfiler ScopedProfiler
  * @class Manager
  * @brief The Manager class is a collection of ScopedPoint`s.
  * @note The Manager instance must be a global variable.

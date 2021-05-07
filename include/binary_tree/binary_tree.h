@@ -9,8 +9,38 @@
 #include <utility>
 #include <sstream>
 
+/** @defgroup binary_tree binary_tree
+ * binary_tree contains a template tree that can be used like associtaive container
+ * that contains key-value pairs with unique keys.
+ * Sorting is done using the key comparison function Compare.
+ * Search, removal, and insertion operations have logarithmic complexity.
+ * Also
+ */
+
 namespace binary_tree {
 
+/** @ingroup binary_tree
+ * @class tree
+ * @brief This is a binary tree that can be cus
+ *
+ * Keys are sorted by using the comparison function Compare.
+ * Search, removal, and insertion operations have logarithmic complexity.
+ * @tparam Key Type of the keys. Each element in a tree is uniquely identified by its key value.
+ *         Aliased as member type tree::key_type.
+ * @tparam T Type of the mapped value. Each element in a tree stores some data as its mapped value.
+ *         Aliased as member type tree::mapped_type. By the default this type is void.
+ * @tparam B balancer type. Now ypu can use only binary_tree::avl_balancer here!
+ * @tparam Compare A binary predicate that takes two element keys as arguments and returns a bool.
+ * The expression comp(a,b), where comp is an object of this type and a and b are key values,
+ * shall return true if a is considered to go before b in the strict weak ordering the function defines.
+ * The map object uses this expression to determine both the order the elements follow in the container
+ * and whether two element keys are equivalent (by comparing them reflexively: they are equivalent if !comp(a,b) && !comp(b,a)).
+ * No two elements in a map container can have equivalent keys.
+ * This can be a function pointer or a function object (see constructor for an example).
+ * This defaults to less<T>, which returns the same as applying the less-than operator (a<b). Aliased as member type tree::key_compare.
+ * @tparam Alloc Type of the allocator object used to define the storage allocation model.
+ * By default, the allocator class template is used, which defines the simplest memory allocation model and is value-independent.
+ */
 template<typename Key, typename T = void, typename B = binary_tree::avl_balancer, typename Compare = std::less<Key>,
          template<typename X> typename Alloc = std::allocator>
 class tree
@@ -33,7 +63,7 @@ private:
         {}
 
         int get_direction(const key_type& key) {
-            return Compare{}(key, value)? 0 : 1;
+            return key_compare{}(key, value)? 0 : 1;
         }
         auto get_next(const key_type& key) {
             return links[get_direction(key)];
@@ -62,22 +92,64 @@ private:
     using Node_alloc_type = Alloc<node_type>;
 
 public:
-    using key_type    = Node::key_type;
-    using mapped_type = Node::mapped_type;
-    using value_type  = Node::value_type;
+    ///Alias for Key
+    using key_type       = Node::key_type;
+    ///Alias for T
+    using mapped_type    = Node::mapped_type;
+    /**
+     * When T isn't void value_type is std::pair<Key,T>.
+     * In the other case it is alias for Key
+     */
+    using value_type     = Node::value_type;
+    /// Alias for Compare
+    using key_compare    = Compare;
 
     //Construct
+    /**
+     * @brief tree creates empty tree
+     */
     tree() noexcept;
+
+    /**
+     * @brief tree not impl yet
+     */
     tree(tree&) = delete;
+
+    /**
+     * @brief tree not impl yet
+     */
     tree(tree&&) = delete;
+
+    /**
+     * @brief ~tree destructor
+     */
     ~tree();
 
     //Capacity
+    /**
+     * @brief empty
+     * @return true if tree is empty otherwise false
+     */
     bool empty() const noexcept;
+
+    /**
+     * @brief size
+     * @return the number of elements in the container
+     */
     size_t size() const noexcept;
+
+    /**
+     * @brief max_size
+     * @return the maximum possible number of elements
+     */
     size_t max_size() const noexcept;
 
     //Modifiers
+    /**
+     * @brief Inserts element into the container, if the container doesn't already contain an element with an equivalent key.
+     * @param value element value to insert
+     * @return true when an element was inserted otherwise false
+     */
     bool insert(const value_type& value) {
         return B::insert(&root, value, [this](Node** parent_ptr, const value_type& value){
             auto new_node = node_allocator.allocate(1);
@@ -86,6 +158,12 @@ public:
             *parent_ptr = new_node;
         });
     }
+
+    /**
+     * @brief erase Removes specified elements from the container.
+     * @param key
+     * @return Number of elements removed.
+     */
     size_t erase(const key_type& key) noexcept {
         auto targetn = B::erase(&root, key);
         if (targetn != nullptr) {
@@ -96,21 +174,52 @@ public:
         }
         return 0;
     }
+
+    /**
+     * @brief swap Exchanges the contents of the container with those of other.
+     *
+     * Does not invoke any move, copy, or swap operations on individual elements.
+     * @param other container to exchange the contents with
+     */
     void swap(tree<Key, T, B, Compare, Alloc>& other);
+
+    /**
+     * @brief clear Erases all elements from the container.
+     *
+     * After this call, size() returns zero.
+     */
     void clear();
 //    template <class... Args>
 //    bool emplace (Args&&... args);
 
     //Operations
+    /**
+     * @brief count Returns the number of elements with key that compares equivalent to the specified argument.
+     * @param key value of the elements to count
+     * @return Number of elements with key that compares equivalent to key or x, which is either 1 or 0 for (1).
+     */
     size_t count(const key_type& key) const;
+
+    /**
+     * @brief calls functor f for every element in the tree
+     * @tparam F functional object type
+     */
     template <typename F>
     void enumerate(F f);
 
     //Test & debug
+    /**
+     * @brief check_height_test for testing purposes only!
+     */
     template<typename F>
     void check_height_test(F check_height) const {
         recursive_check_height(root, check_height);
     }
+
+    /**
+     * @brief dump_tree dumps tree content into graphviz BST format
+     * @param ss
+     */
     void dump_tree (std::ostringstream& ss) const {
         ss << "digraph BST {\n";
         recursive_dump(root, ss);
