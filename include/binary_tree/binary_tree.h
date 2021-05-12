@@ -10,11 +10,30 @@
 #include <sstream>
 
 /** @defgroup binary_tree binary_tree
- * binary_tree contains a template tree that can be used like associtaive container
- * that contains key-value pairs with unique keys.
- * Sorting is done using the key comparison function Compare.
- * Search, removal, and insertion operations have logarithmic complexity.
- * Also
+ * @brief Self balanced binary tree (AVL, RB, etc)
+ *
+ * The binary tree is a famous data structure that has been described many times.
+ * As example you can find the description here <a href="https://en.wikipedia.org/wiki/Binary_tree">Wiki - Binary tree</a>.
+ *
+ * Guess you know such standart C++ classes as <a href="https://en.cppreference.com/w/cpp/container/set">std::set</a>
+ * and <a href="https://en.cppreference.com/w/cpp/container/map">std::map</a>. They are ussualy implemented as
+ * <a href="https://en.wikipedia.org/wiki/Red%E2%80%93black_tree">Wiki - Red-black tree</a>.
+ * This implementaions is similar to STL but have some differences:
+ *  - Here is only one class namely binary_tree that is a map and the set.
+ *    if you want to have a set you should pass template parameter T as void.
+ *    as example:
+ *    @code
+ *    binary_tree::binary_tree<int, void> my_set; //this is a set that can store int keys only
+ *
+ *    binary_tree::binary_tree<int, std::string> my_map; //this is a map where key has type int and maped value is std::string
+ *    @endcode
+ *  - This implementaion uses only two links per node. It helps to reduce memory usage and I hope it helps to improve performance.
+ *    But without a link to the parent node impossible to implement iterator based acces. So it isn't present.
+ *    Instead you can use enumerators.
+ *  - balancer type can be customized via template parameter B. But now only avl_balancer is implemented.
+ *
+ *  avl_balancer provides <a href="https://en.wikipedia.org/wiki/AVL_tree">AVL tree</a>.
+ *  Most implementations of AVL tree are recursive. But this library contains iterative inserting and removing.
  */
 
 namespace binary_tree {

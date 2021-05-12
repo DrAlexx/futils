@@ -1,0 +1,12 @@
+/**
+ * @mainpage
+ * For a long time of the my work in the different projects I have cought some situations when standard library or boost library haven't got needed functional.
+ * This library is a collection of code that was made in the such situations.
+ *
+ * There are:
+ *
+ *  - ScopedProfiler template-based in-source profiler.
+ *  - binary_tree  template-based AVL tree that has non-recursive insert/erase implementations.
+ *
+ *
+ */
