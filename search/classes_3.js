@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['tree_36',['tree',['../classbinary__tree_1_1tree.html',1,'binary_tree']]]
+  ['scopedpoint_36',['ScopedPoint',['../class_scoped_profiler_1_1_scoped_point.html',1,'ScopedProfiler']]],
+  ['shardmap_37',['ShardMap',['../class_shard_map.html',1,'']]]
 ];

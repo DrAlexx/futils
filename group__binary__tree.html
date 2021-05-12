@@ -89,6 +89,9 @@ $(document).ready(function(){initNavTree('group__binary__tree.html',''); initRes
 <div class="title">binary_tree</div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>Self balanced binary tree (AVL, RB, etc)  
+<a href="#details">More...</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
 Classes</h2></td></tr>
@@ -97,13 +100,22 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<p>binary_tree contains a template tree that can be used like associtaive container that contains key-value pairs with unique keys. Sorting is done using the key comparison function Compare. Search, removal, and insertion operations have logarithmic complexity. Also </p>
+<p>The binary tree is a famous data structure that has been described many times. As example you can find the description here <a href="https://en.wikipedia.org/wiki/Binary_tree">Wiki - Binary tree</a>.</p>
+<p>Guess you know such standart C++ classes as <a href="https://en.cppreference.com/w/cpp/container/set">std::set</a> and <a href="https://en.cppreference.com/w/cpp/container/map">std::map</a>. They are ussualy implemented as <a href="https://en.wikipedia.org/wiki/Red%E2%80%93black_tree">Wiki - Red-black tree</a>. This implementaions is similar to STL but have some differences:</p><ul>
+<li>Here is only one class namely binary_tree that is a map and the set. if you want to have a set you should pass template parameter T as void. as example: <div class="fragment"><div class="line">binary_tree::binary_tree&lt;int, void&gt; my_set; <span class="comment">//this is a set that can store int keys only</span></div>
+<div class="line"> </div>
+<div class="line">binary_tree::binary_tree&lt;int, std::string&gt; my_map; <span class="comment">//this is a map where key has type int and maped value is std::string</span></div>
+</div><!-- fragment --></li>
+<li>This implementaion uses only two links per node. It helps to reduce memory usage and I hope it helps to improve performance. But without a link to the parent node impossible to implement iterator based acces. So it isn't present. Instead you can use enumerators.</li>
+<li>balancer type can be customized via template parameter B. But now only avl_balancer is implemented.</li>
+</ul>
+<p>avl_balancer provides <a href="https://en.wikipedia.org/wiki/AVL_tree">AVL tree</a>. Most implementations of AVL tree are recursive. But this library contains iterative inserting and removing. </p>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="footer">Generated on Fri May 7 2021 17:12:35 for Futils by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1 </li>
+    <li class="footer">Generated on Wed May 12 2021 17:04:32 for Futils by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1 </li>
   </ul>
 </div>
 </body>
