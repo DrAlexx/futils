@@ -67,19 +67,19 @@ find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIR})
 
 set(futil_HEADERS
-  include/util/visibility.h
-  include/util/type_utils.h
-  include/util/const_pool.h
-  include/util/bitutil.h
-  include/util/rlucache.h
-  include/util/shardmap.h
-  include/util/scoped_profiler.h
+    include/binary_tree/base.h
+    include/binary_tree/binary_tree.h
+    include/binary_tree/avl_balancer.h
 
-  include/patricia_trie/patricia_trie.h
+    include/util/scoped_profiler.h
+    include/util/const_pool.h
+    include/util/visibility.h
+    include/util/type_utils.h
+    include/util/rlu_map.h
+    include/util/shardmap.h
 
-  include/binary_tree/base.h
-  include/binary_tree/binary_tree.h
-  include/binary_tree/avl_balancer.h
+#  include/util/bitutil.h
+#  include/patricia_trie/patricia_trie.h
 )
 
 #set(futil_UTIL_SOURCES src/scoped_profiler.cpp)
@@ -101,6 +101,10 @@ add_test(scoped_profiler ./scoped_profiler_test)
 add_executable(const_pool_test test/main.cpp test/const_pool.cpp ${futil_HEADERS} ${futil_SOURCES})
 target_link_libraries(const_pool_test ${Boost_LIBRARIES})
 add_test(const_pool_test ./const_pool_test)
+
+add_executable(rlu_map_test test/main.cpp test/rlu_map.cpp ${futil_HEADERS} ${futil_SOURCES})
+target_link_libraries(rlu_map_test ${Boost_LIBRARIES})
+add_test(rlu_map_test ./rlu_map_test)
 
 #add_library(futil STATIC
 #    ${futil_UTIL_SOURCES}
