@@ -3,6 +3,7 @@
 #include "avl_balancer.h"
 
 #include <functional>
+#include <initializer_list>
 #include <limits>
 #include <memory>
 #include <type_traits>
@@ -81,10 +82,12 @@ private:
             : value(v)
         {}
 
-        int get_direction(const key_type& key) {
+        template<typename K>
+        int get_direction(const K& key) {
             return key_compare{}(key, value)? 0 : 1;
         }
-        auto get_next(const key_type& key) {
+        template<typename K>
+        auto get_next(const K& key) {
             return links[get_direction(key)];
         }
 
@@ -123,19 +126,24 @@ public:
     /// Alias for Compare
     using key_compare    = Compare;
 
+    using size_type = std::size_t;
+
     //Construct
     /**
      * @brief tree creates empty tree
+     * TODO: impl
      */
     tree() noexcept;
 
     /**
      * @brief tree not impl yet
+     * TODO: impl
      */
     tree(tree&) = delete;
 
     /**
      * @brief tree not impl yet
+     * TODO: impl
      */
     tree(tree&&) = delete;
 
@@ -144,24 +152,31 @@ public:
      */
     ~tree();
 
+    ///TODO: impl
+    tree& operator=(const tree& other) = delete;
+    ///TODO: impl
+    tree& operator=(tree&& other) = delete;
+    ///TODO: impl
+    tree& operator=(std::initializer_list<value_type> ilist) = delete;
+
     //Capacity
     /**
      * @brief empty
      * @return true if tree is empty otherwise false
      */
-    bool empty() const noexcept;
+    [[nodiscard]] bool empty() const noexcept;
 
     /**
      * @brief size
      * @return the number of elements in the container
      */
-    size_t size() const noexcept;
+    size_type size() const noexcept;
 
     /**
      * @brief max_size
      * @return the maximum possible number of elements
      */
-    size_t max_size() const noexcept;
+    size_type max_size() const noexcept;
 
     //Modifiers
     /**
@@ -169,30 +184,14 @@ public:
      * @param value element value to insert
      * @return true when an element was inserted otherwise false
      */
-    bool insert(const value_type& value) {
-        return B::insert(&root, value, [this](Node** parent_ptr, const value_type& value){
-            auto new_node = node_allocator.allocate(1);
-            std::allocator_traits<Node_alloc_type>::construct(node_allocator, new_node, value);
-            ++node_count;
-            *parent_ptr = new_node;
-        });
-    }
+    bool insert(const value_type& value);
 
     /**
      * @brief erase Removes specified elements from the container.
      * @param key
      * @return Number of elements removed.
      */
-    size_t erase(const key_type& key) noexcept {
-        auto targetn = B::erase(&root, key);
-        if (targetn != nullptr) {
-            std::allocator_traits<Node_alloc_type>::destroy(node_allocator, targetn);
-            node_allocator.deallocate(targetn, 1);
-            --node_count;
-            return 1;
-        }
-        return 0;
-    }
+    size_type erase(const key_type& key);
 
     /**
      * @brief swap Exchanges the contents of the container with those of other.
@@ -207,17 +206,23 @@ public:
      *
      * After this call, size() returns zero.
      */
-    void clear();
+    void clear() noexcept;
 //    template <class... Args>
 //    bool emplace (Args&&... args);
 
-    //Operations
+    //Lookup
     /**
      * @brief count Returns the number of elements with key that compares equivalent to the specified argument.
      * @param key value of the elements to count
      * @return Number of elements with key that compares equivalent to key or x, which is either 1 or 0 for (1).
      */
-    size_t count(const key_type& key) const;
+    template <typename K>
+    size_type count(const K& x) const;
+
+    template <typename K>
+    bool contains(const K& x) const {
+        return count(x) != 0;
+    }
 
     /**
      * @brief calls functor f for every element in the tree
@@ -225,6 +230,12 @@ public:
      */
     template <typename F>
     void enumerate(F f);
+
+    template <typename K, typename F>
+    void enumerate_lower_bound(const K& x, F f);
+
+    template <typename K, typename F>
+    void enumerate_upper_bound(const K& x, F f);
 
     //Test & debug
     /**
@@ -253,7 +264,8 @@ private:
     template <typename F>
     void recursive_enumerate(node_pointer start_node, F f);
 
-    static node_pointer lookup(node_pointer node, const key_type& key) {
+    template<typename K>
+    static node_pointer lookup(node_pointer node, const K& key) {
         while (node != nullptr && key != Node::get_key(node->value))
             node = node->get_next(key);
         return node;
@@ -299,19 +311,42 @@ bool tree<Key, T, B, Compare, Alloc>::empty() const noexcept {
 }
 
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
-size_t tree<Key, T, B, Compare, Alloc>::size() const noexcept {
+tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::size() const noexcept {
     return node_count;
 }
 
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
-size_t tree<Key, T, B, Compare, Alloc>::max_size() const noexcept {
+tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::max_size() const noexcept {
     return std::numeric_limits<size_t>::max()/sizeof(tree<Key, T, B, Compare, Alloc>::node_type);
 }
 
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
-size_t tree<Key, T, B, Compare, Alloc>::count(const tree<Key, T, B, Compare, Alloc>::key_type& key) const
+bool tree<Key, T, B, Compare, Alloc>::insert(const tree<Key, T, B, Compare, Alloc>::value_type& value) {
+    return B::insert(&root, value, [this](tree<Key, T, B, Compare, Alloc>::Node** parent_ptr, const tree<Key, T, B, Compare, Alloc>::value_type& value){
+        auto new_node = node_allocator.allocate(1);
+        std::allocator_traits<Node_alloc_type>::construct(node_allocator, new_node, value);
+        ++node_count;
+        *parent_ptr = new_node;
+    });
+}
+
+template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
+tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::erase(const tree<Key, T, B, Compare, Alloc>::key_type& key) {
+    auto targetn = B::erase(&root, key);
+    if (targetn != nullptr) {
+        std::allocator_traits<Node_alloc_type>::destroy(node_allocator, targetn);
+        node_allocator.deallocate(targetn, 1);
+        --node_count;
+        return 1;
+    }
+    return 0;
+}
+
+template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
+template<typename K>
+tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::count(const K& x) const
 {
-    return tree<Key, T, B, Compare, Alloc>::lookup(root, key) == nullptr? 0 : 1;
+    return tree<Key, T, B, Compare, Alloc>::lookup(root, x) == nullptr? 0 : 1;
 }
 
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
@@ -328,7 +363,7 @@ void tree<Key, T, B, Compare, Alloc>::swap(tree<Key, T, B, Compare, Alloc>& othe
 }
 
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
-void tree<Key, T, B, Compare, Alloc>::clear()
+void tree<Key, T, B, Compare, Alloc>::clear() noexcept
 {
     recursive_enumerate(root, [this](auto* node){
         std::allocator_traits<Node_alloc_type>::destroy(node_allocator, node);
