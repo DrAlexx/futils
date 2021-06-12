@@ -7,23 +7,27 @@ namespace binary_tree {
 struct avl_balancer {
 
 struct Node {
+    auto get_balance() const { return balance; }
+    bool is_balanced() const { return balance < 0; }
+    void set_balance(int8_t new_balance) {
+        balance = new_balance;
+    }
+
+private:
     /*
      * -1 means balanced
      * 1  means right is highier
      * 0  means left is highier
      */
     int8_t balance = -1;
-
-    auto get_balance() const { return balance; }
-    bool is_balanced() const { return balance < 0; }
 };
 
 private:
 template <typename Node>
 static Node* avl_rotate_2(Node** path_top, int dir) noexcept {
-    (*path_top)->balance = -1;
+    (*path_top)->set_balance(-1);
     Node* result = rotate_2(path_top, dir);
-    (*path_top)->balance = -1;
+    (*path_top)->set_balance(-1);
     return result;
 }
 
@@ -36,9 +40,9 @@ static Node* avl_rotate_3(Node** path_top, int dir, int third) noexcept {
     auto node_C = node_D->links[1 - dir];
     auto node_E = node_D->links[dir];
 
-    node_B->balance = -1;
-    node_F->balance = -1;
-    node_D->balance = -1;
+    node_B->set_balance(-1);
+    node_F->set_balance(-1);
+    node_D->set_balance(-1);
 
     rotate_3(path_top, dir);
 
@@ -46,11 +50,11 @@ static Node* avl_rotate_3(Node** path_top, int dir, int third) noexcept {
         return nullptr;
     else if (third == dir) {
         /* E holds the insertion so B is unbalanced */
-        node_B->balance = 1 - dir;
+        node_B->set_balance(1 - dir);
         return node_E;
     } else {
         /* C holds the insertion so F is unbalanced */
-        node_F->balance = dir;
+        node_F->set_balance(dir);
         return node_C;
     }
 }
@@ -85,7 +89,7 @@ static bool insert(Node** root, Node::value_type value, C create_node)
         ;
     else if (path->get_balance() != (first = path->get_direction(key))) {
         /* took the shorter path */
-        path->balance = -1;
+        path->set_balance(-1);
         path = path->links[first];
     } else if (first == (second = path->links[first]->get_direction(key))) {
         /* just a two-point rotate */
@@ -108,7 +112,7 @@ static bool insert(Node** root, Node::value_type value, C create_node)
     //Stage 3. Update balance info in the each node
     while (path != nullptr && key != Node::get_key(path->value)) {
         auto direction = path->get_direction(key);
-        path->balance = direction;
+        path->set_balance(direction);
         path = path->links[direction];
     }
     return  true;
@@ -154,17 +158,17 @@ static Node* erase(Node** root, const typename Node::key_type& key) noexcept
         if (tree->links[bdir] == nullptr)
             break;
         if (tree->is_balanced()) {
-            tree->balance = 1 - bdir;
+            tree->set_balance(1 - bdir);
         } else if (tree->get_balance() == bdir) {
-            tree->balance = -1;
+            tree->set_balance(-1);
         } else {
             auto second = tree->links[1 - bdir]->get_balance();
             if (second == bdir) {
-                avl_rotate_3(treep, 1 - bdir, tree->links[1 - bdir]->links[bdir]->balance);
+                avl_rotate_3(treep, 1 - bdir, tree->links[1 - bdir]->links[bdir]->get_balance());
             } else if(second == -1) {
                 avl_rotate_2(treep, 1 - bdir);
-                tree->balance = 1 - bdir;
-                (*treep)->balance = bdir;
+                tree->set_balance(1 - bdir);
+                (*treep)->set_balance(bdir);
             } else {
                 avl_rotate_2(treep, 1 - bdir);
             }
@@ -187,7 +191,7 @@ static Node* erase(Node** root, const typename Node::key_type& key) noexcept
     *treep    = tree->links[1 - dir];
     tree->links[0] = targetn->links[0];
     tree->links[1] = targetn->links[1];
-    tree->balance  = targetn->balance;
+    tree->set_balance(targetn->get_balance());
 
     return targetn;
 }

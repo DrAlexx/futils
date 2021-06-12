@@ -77,6 +77,7 @@ set(futil_HEADERS
     include/util/type_utils.h
     include/util/rlu_map.h
     include/util/shardmap.h
+    include/util/allocator.h
 
 #  include/util/bitutil.h
 #  include/patricia_trie/patricia_trie.h

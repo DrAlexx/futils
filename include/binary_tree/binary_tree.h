@@ -1,6 +1,7 @@
 #pragma once
 
 #include "avl_balancer.h"
+#include "util/allocator.h"
 
 #include <functional>
 #include <initializer_list>
@@ -62,7 +63,7 @@ namespace binary_tree {
  * By default, the allocator class template is used, which defines the simplest memory allocation model and is value-independent.
  */
 template<typename Key, typename T = void, typename B = binary_tree::avl_balancer, typename Compare = std::less<Key>,
-         template<typename X> typename Alloc = std::allocator>
+         template<typename X> typename Alloc = util::allocator>
 class tree
 {
 private:
@@ -70,6 +71,7 @@ private:
         using key_type      = Key;
         using mapped_type   = T;
 
+        constexpr inline static std::align_val_t node_align{8};
         using value_type = typename std::conditional<
             std::is_void<mapped_type>::value,
             key_type,
@@ -112,6 +114,7 @@ private:
     using node_type       = Node;
     using node_pointer    = node_type*;
     using Node_alloc_type = Alloc<node_type>;
+    constexpr inline static std::align_val_t node_align{8};
 
 public:
     ///Alias for Key
@@ -323,7 +326,7 @@ tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::max_
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
 bool tree<Key, T, B, Compare, Alloc>::insert(const tree<Key, T, B, Compare, Alloc>::value_type& value) {
     return B::insert(&root, value, [this](tree<Key, T, B, Compare, Alloc>::Node** parent_ptr, const tree<Key, T, B, Compare, Alloc>::value_type& value){
-        auto new_node = node_allocator.allocate(1);
+        auto new_node = node_allocator.allocate(1, node_align);
         std::allocator_traits<Node_alloc_type>::construct(node_allocator, new_node, value);
         ++node_count;
         *parent_ptr = new_node;
@@ -335,7 +338,7 @@ tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::eras
     auto targetn = B::erase(&root, key);
     if (targetn != nullptr) {
         std::allocator_traits<Node_alloc_type>::destroy(node_allocator, targetn);
-        node_allocator.deallocate(targetn, 1);
+        node_allocator.deallocate(targetn, node_align);
         --node_count;
         return 1;
     }
@@ -352,7 +355,21 @@ tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::coun
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
 template <typename F>
 void tree<Key, T, B, Compare, Alloc>::enumerate(F f) {
-    //FIXME: not impl
+    recursive_enumerate(root, [f](auto* node){
+        f(node->value);
+    });
+}
+
+template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
+template <typename K, typename F>
+void tree<Key, T, B, Compare, Alloc>::enumerate_lower_bound(const K& x, F f) {
+
+}
+
+template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
+template <typename K, typename F>
+void tree<Key, T, B, Compare, Alloc>::enumerate_upper_bound(const K& x, F f) {
+
 }
 
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
@@ -367,7 +384,7 @@ void tree<Key, T, B, Compare, Alloc>::clear() noexcept
 {
     recursive_enumerate(root, [this](auto* node){
         std::allocator_traits<Node_alloc_type>::destroy(node_allocator, node);
-        node_allocator.deallocate(node, 1);
+        node_allocator.deallocate(node, node_align);
     });
 
     root = nullptr;
@@ -388,4 +405,32 @@ void tree<Key, T, B, Compare, Alloc>::recursive_enumerate(node_pointer start_nod
 
     f(start_node);
 }
+
+//template <typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
+//template <typename F>
+//void tree<Key, T, B, Compare, Alloc>::enumerate(node_pointer start_node, size_t max_depth, F f) {
+//    if(start_node == nullptr || max_depth == 0)
+//        return;
+
+//    decltype(start_node->links[0]) stack[max_depth];
+//    int stack_ptr = 0;
+
+//    do {
+//        if(start_node->links[0] != nullptr) {
+//            stack[stack_ptr++] = start_node;
+//            start_node = start_node->links[0];
+//            continue;
+//        }
+//        if(start_node->links[1] != nullptr) {
+//            stack[stack_ptr++] = start_node;
+//            start_node = start_node->links[1];
+//            continue;
+//        }
+//        f(start_node->value);
+
+
+//    } while (start_node != nullptr);
+
+//}
+
 }
