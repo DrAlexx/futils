@@ -62,12 +62,12 @@
  * @endcode
  */
 
-namespace ScopedProfiler {
+namespace profiler {
 
-struct Manager;
+struct point_set;
 
-struct BaseInfo {
-    BaseInfo(const char* str)
+struct base_info {
+    base_info(const char* str)
         : name(str)
     {}
     const std::string_view      name;
@@ -81,23 +81,23 @@ struct BaseInfo {
  * @brief The Info struct contains the measurement named data.
  * You don't need to use it directly
  */
-template <Manager& mgr>
-struct Info : public BaseInfo {
+template <point_set& mgr>
+struct point_info : public base_info {
     /**
      * @brief Info initializes an instance and stores Info pointer into the given manager by the given name
      * There is no point to have the Info instance which is not registered in the Manager.
      * @arg mgr Manager for this info instance
      * @arg name is unique name for this Info instance
      */
-    Info(const char* str);
+    point_info(const char* str);
 };
 
-class ManagerImpl {
+class point_set_impl {
 public:
-    ManagerImpl(const ManagerImpl&) = delete;
-    ManagerImpl(const ManagerImpl&&) = delete;
-    ManagerImpl& operator=(const ManagerImpl&) = delete;
-    ManagerImpl(){}
+    point_set_impl(const point_set_impl&) = delete;
+    point_set_impl(const point_set_impl&&) = delete;
+    point_set_impl& operator=(const point_set_impl&) = delete;
+    point_set_impl(){}
 
     /**
      * @brief for_each_point is an enumerator that calls the functor f for every ScopedPoint which is linked to the Manager.
@@ -127,7 +127,7 @@ public:
         }
     }
 
-    std::vector<BaseInfo*> info_array;
+    std::vector<base_info*> info_array;
 
     /**
      * @private
@@ -137,56 +137,56 @@ public:
      *  You don't need to call it directly
      * @arg info
      */
-    void AddInfo(BaseInfo* info) {
+    void AddInfo(base_info* info) {
         info_array.push_back(info);
     }
 };
 
 /** @ingroup ScopedProfiler ScopedProfiler
- * @class Manager
- * @brief The Manager class is a collection of ScopedPoint`s.
- * @note The Manager instance must be a global variable.
+ * @class point_set
+ * @brief The point_set class is a collection of point`s.
+ * @note The point_set instance must be a global variable.
  */
-struct Manager {
-    Manager(const Manager&) = delete;
-    Manager(const Manager&&) = delete;
-    Manager& operator=(const Manager&) = delete;
-    Manager(){}
+struct point_set {
+    point_set(const point_set&) = delete;
+    point_set(const point_set&&) = delete;
+    point_set& operator=(const point_set&) = delete;
+    point_set(){}
 
-    template <Manager& mgr>
-    static ManagerImpl& get_manager() {
-        static ManagerImpl manager_impl;
+    template <point_set& mgr>
+    static point_set_impl& get_manager() {
+        static point_set_impl manager_impl;
         return manager_impl;
     }
 };
 
-template <Manager& mgr>
-Info<mgr>::Info(const char* str)
-    : BaseInfo (str) {
-    Manager::get_manager<mgr>().AddInfo(this);
+template <point_set& mgr>
+point_info<mgr>::point_info(const char* str)
+    : base_info (str) {
+    point_set::get_manager<mgr>().AddInfo(this);
 }
 
 /** @ingroup ScopedProfiler
- * @class ScopedPoint
+ * @class point
  * @brief It is a time measurement point.
  *
- * You don't need start/stop methods since start is an creation of the ScopedPoint
- * and stop is an destruction of the ScopedPoint instance.
+ * You don't need start/stop methods since start is an creation of the point
+ * and stop is an destruction of the point instance.
  * The class has two template parameters:
  * @tparam mgr  - is global variable of Manager type since every point have to be registered in some manager.
  * @tparam name - is a unique point name.
  * @note name must be static const char* since template limitation.
  */
-template <Manager& mgr, const char* name>
-class ScopedPoint {
+template <point_set& mgr, const char* name>
+class point {
 private:
     using clock = std::chrono::high_resolution_clock;
 
 public:
-    ScopedPoint() {
+    point() {
         start = clock::now();
     }
-    ~ScopedPoint(){
+    ~point(){
         auto end = clock::now();
         info.cumulative_time_us += std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
         info.call_count++;
@@ -194,7 +194,7 @@ public:
 
 private:
     clock::time_point start;
-    static inline Info<mgr> info = Info<mgr>(name);
+    static inline point_info<mgr> info = point_info<mgr>(name);
 };
 
 } //namespace ScopedProfiler

@@ -71,7 +71,7 @@ set(futil_HEADERS
     include/binary_tree/binary_tree.h
     include/binary_tree/avl_balancer.h
 
-    include/util/scoped_profiler.h
+    include/util/profiler.h
     include/util/const_pool.h
     include/util/visibility.h
     include/util/type_utils.h
@@ -95,9 +95,9 @@ add_executable(avl_tree_test test/main.cpp test/avl_tree.cpp ${futil_HEADERS} ${
 target_link_libraries(avl_tree_test ${Boost_LIBRARIES})
 add_test(avl_tree ./avl_tree_test)
 
-add_executable(scoped_profiler_test test/main.cpp test/scoped_profiler.cpp ${futil_HEADERS} ${futil_SOURCES})
-target_link_libraries(scoped_profiler_test ${Boost_LIBRARIES})
-add_test(scoped_profiler ./scoped_profiler_test)
+add_executable(profiler_test test/main.cpp test/profiler.cpp ${futil_HEADERS} ${futil_SOURCES})
+target_link_libraries(profiler_test ${Boost_LIBRARIES})
+add_test(profiler ./profiler_test)
 
 add_executable(const_pool_test test/main.cpp test/const_pool.cpp ${futil_HEADERS} ${futil_SOURCES})
 target_link_libraries(const_pool_test ${Boost_LIBRARIES})
