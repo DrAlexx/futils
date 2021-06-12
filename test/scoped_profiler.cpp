@@ -24,12 +24,15 @@ BOOST_AUTO_TEST_CASE(Time_measurment)
 
         std::this_thread::sleep_for(std::chrono::microseconds(test_time_us));
     }
-    mgr_time.for_each_point([test_time_us, delta_us](const std::string_view name, uint64_t call_count, uint64_t cumulative_time_us){
+    bool has_result = false;
+    ScopedProfiler::Manager::get_manager<mgr_time>().for_each_point([&has_result, test_time_us, delta_us](const std::string_view name, uint64_t call_count, uint64_t cumulative_time_us){
+        has_result = true;
         BOOST_REQUIRE_EQUAL(name, "Test point");
         BOOST_REQUIRE_EQUAL(call_count, 1);
         BOOST_REQUIRE(((int)cumulative_time_us - test_time_us) < delta_us);
         std::cout << "Measured time is " << cumulative_time_us << "us" << std::endl;
     });
+    BOOST_REQUIRE(has_result);
 };
 
 ScopedProfiler::Manager mgr_points;
@@ -76,7 +79,7 @@ BOOST_AUTO_TEST_CASE(Point_count)
     };
     std::vector<point> points;
     points.reserve(expected_points.size());
-    mgr_points.for_each_point([&points](const std::string_view name, uint64_t call_count, uint64_t /*cumulative_time_us*/){
+    ScopedProfiler::Manager::get_manager<mgr_points>().for_each_point([&points](const std::string_view name, uint64_t call_count, uint64_t /*cumulative_time_us*/){
         points.push_back(point{std::string(name), call_count});
     });
     std::sort(points.begin(), points.end(), [](const auto& p1, const auto& p2){

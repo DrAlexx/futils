@@ -118,14 +118,14 @@ private:
 
 public:
     ///Alias for Key
-    using key_type       = Node::key_type;
+    using key_type       = typename Node::key_type;
     ///Alias for T
-    using mapped_type    = Node::mapped_type;
+    using mapped_type    = typename Node::mapped_type;
     /**
      * When T isn't void value_type is std::pair<Key,T>.
      * In the other case it is alias for Key
      */
-    using value_type     = Node::value_type;
+    using value_type     = typename  Node::value_type;
     /// Alias for Compare
     using key_compare    = Compare;
 
@@ -314,12 +314,12 @@ bool tree<Key, T, B, Compare, Alloc>::empty() const noexcept {
 }
 
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
-tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::size() const noexcept {
+typename tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::size() const noexcept {
     return node_count;
 }
 
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
-tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::max_size() const noexcept {
+typename tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::max_size() const noexcept {
     return std::numeric_limits<size_t>::max()/sizeof(tree<Key, T, B, Compare, Alloc>::node_type);
 }
 
@@ -334,7 +334,7 @@ bool tree<Key, T, B, Compare, Alloc>::insert(const tree<Key, T, B, Compare, Allo
 }
 
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
-tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::erase(const tree<Key, T, B, Compare, Alloc>::key_type& key) {
+typename tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::erase(const tree<Key, T, B, Compare, Alloc>::key_type& key) {
     auto targetn = B::erase(&root, key);
     if (targetn != nullptr) {
         std::allocator_traits<Node_alloc_type>::destroy(node_allocator, targetn);
@@ -347,7 +347,7 @@ tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::eras
 
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
 template<typename K>
-tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::count(const K& x) const
+typename tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::count(const K& x) const
 {
     return tree<Key, T, B, Compare, Alloc>::lookup(root, x) == nullptr? 0 : 1;
 }

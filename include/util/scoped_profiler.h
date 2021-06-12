@@ -64,33 +64,41 @@
 
 namespace ScopedProfiler {
 
-class Manager;
+struct Manager;
+
+struct BaseInfo {
+    BaseInfo(const char* str)
+        : name(str)
+    {}
+    const std::string_view      name;
+    std::atomic_uint_fast64_t   call_count         = 0;
+    std::atomic_uint_fast64_t   cumulative_time_us = 0;
+};
+
 
 /**
  * @private Info
  * @brief The Info struct contains the measurement named data.
  * You don't need to use it directly
  */
-struct Info {
+template <Manager& mgr>
+struct Info : public BaseInfo {
     /**
      * @brief Info initializes an instance and stores Info pointer into the given manager by the given name
-     * There is no point to have the Info instance which is not registared in the Manager.
+     * There is no point to have the Info instance which is not registered in the Manager.
      * @arg mgr Manager for this info instance
      * @arg name is unique name for this Info instance
      */
-    Info(Manager& mgr, const char* name);
-    const std::string_view      name;
-    std::atomic_uint_fast64_t   call_count         = 0;
-    std::atomic_uint_fast64_t   cumulative_time_us = 0;
+    Info(const char* str);
 };
 
-/** @ingroup ScopedProfiler ScopedProfiler
- * @class Manager
- * @brief The Manager class is a collection of ScopedPoint`s.
- * @note The Manager instance must be a global variable.
- */
-class Manager {
+class ManagerImpl {
 public:
+    ManagerImpl(const ManagerImpl&) = delete;
+    ManagerImpl(const ManagerImpl&&) = delete;
+    ManagerImpl& operator=(const ManagerImpl&) = delete;
+    ManagerImpl(){}
+
     /**
      * @brief for_each_point is an enumerator that calls the functor f for every ScopedPoint which is linked to the Manager.
      *
@@ -119,8 +127,7 @@ public:
         }
     }
 
-private:
-    std::vector<Info*> info_array;
+    std::vector<BaseInfo*> info_array;
 
     /**
      * @private
@@ -130,16 +137,33 @@ private:
      *  You don't need to call it directly
      * @arg info
      */
-    void AddInfo(Info* info) {
+    void AddInfo(BaseInfo* info) {
         info_array.push_back(info);
     }
-
-    friend struct Info;
 };
 
-Info::Info(Manager& mgr, const char* str)
-    : name(str) {
-    mgr.AddInfo(this);
+/** @ingroup ScopedProfiler ScopedProfiler
+ * @class Manager
+ * @brief The Manager class is a collection of ScopedPoint`s.
+ * @note The Manager instance must be a global variable.
+ */
+struct Manager {
+    Manager(const Manager&) = delete;
+    Manager(const Manager&&) = delete;
+    Manager& operator=(const Manager&) = delete;
+    Manager(){}
+
+    template <Manager& mgr>
+    static ManagerImpl& get_manager() {
+        static ManagerImpl manager_impl;
+        return manager_impl;
+    }
+};
+
+template <Manager& mgr>
+Info<mgr>::Info(const char* str)
+    : BaseInfo (str) {
+    Manager::get_manager<mgr>().AddInfo(this);
 }
 
 /** @ingroup ScopedProfiler
@@ -170,7 +194,7 @@ public:
 
 private:
     clock::time_point start;
-    static inline Info info = Info(mgr, name);
+    static inline Info<mgr> info = Info<mgr>(name);
 };
 
 } //namespace ScopedProfiler

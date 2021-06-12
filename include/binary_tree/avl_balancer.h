@@ -61,7 +61,7 @@ static Node* avl_rotate_3(Node** path_top, int dir, int third) noexcept {
 
 public:
 template<typename Node, typename C>
-static bool insert(Node** root, Node::value_type value, C create_node)
+static bool insert(Node** root, typename Node::value_type value, C create_node)
 {
     //Stage 1. Find a position in the tree and link a new node
     // by the way find and remember a node where the tree starts to be unbalanced.
