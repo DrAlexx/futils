@@ -9,5 +9,5 @@ There are:
 - ShardMap - is a template that helps to grow up map [performance in multithreading apps.
 - BinaryTree - is a template AVL tree that has non-recursive insert/erase implementations.
 
-[Doxygen generated API documentaion is here](https://dralexx.github.io/futils/)
+[Doxygen generated API documentaion is here](https://olexiykhokhlov.github.io/futils/)
 
