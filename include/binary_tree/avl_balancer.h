@@ -80,33 +80,32 @@ static bool insert(Node** root, typename Node::value_type value, C create_node)
         return  false; //already has the key
     create_node(node_ptr, value);
 
-    //TODO: move to avl_balancer
     //Stage 2. Rebalance
     //rebalance_insert(path_top, key);
     auto path = *path_top;
     int first, second, third;
-    if (path->is_balanced())
-        ;
-    else if (path->get_balance() != (first = path->get_direction(key))) {
-        /* took the shorter path */
-        path->set_balance(-1);
-        path = path->links[first];
-    } else if (first == (second = path->links[first]->get_direction(key))) {
-        /* just a two-point rotate */
-        path = avl_rotate_2(path_top, first);
-    } else {
-        /* fine details of the 3 point rotate depend on the third step.
-         * However there may not be a third step, if the third point of the
-         * rotation is the newly inserted point.  In that case we record
-         * the third step as NEITHER
-         */
-        path = path->links[first]->links[second];
-        if (key == Node::get_key(path->value))
-            third = -1;
-        else
-            third = path->get_direction(key);
+    if (!path->is_balanced()) {
+        if (path->get_balance() != (first = path->get_direction(key))) {
+            /* took the shorter path */
+            path->set_balance(-1);
+            path = path->links[first];
+        } else if (first == (second = path->links[first]->get_direction(key))) {
+            /* just a two-point rotate */
+            path = avl_rotate_2(path_top, first);
+        } else {
+            /* fine details of the 3 point rotate depend on the third step.
+             * However there may not be a third step, if the third point of the
+             * rotation is the newly inserted point.  In that case we record
+             * the third step as NEITHER
+             */
+            path = path->links[first]->links[second];
+            if (key == Node::get_key(path->value))
+                third = -1;
+            else
+                third = path->get_direction(key);
 
-        path = avl_rotate_3(path_top, first, third);
+            path = avl_rotate_3(path_top, first, third);
+        }
     }
 
     //Stage 3. Update balance info in the each node
@@ -141,7 +140,7 @@ static Node* erase(Node** root, const typename Node::key_type& key) noexcept
         node = *nodep;
     }
     if (targetp == nullptr)
-        return 0; //key not found nothing to remove
+        return nullptr; //key not found nothing to remove
 
     /*
      * Stage 2.

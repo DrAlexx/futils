@@ -66,6 +66,11 @@ endif (DOXYGEN_FOUND)
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIR})
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules (JEMALLOC jemalloc)
+pkg_search_module(JEMALLOC REQUIRED jemalloc)
+include_directories(${JEMALLOC_INCLUDE_DIRS})
+
 set(futil_HEADERS
     include/binary_tree/base.h
     include/binary_tree/binary_tree.h
@@ -91,19 +96,23 @@ set(futil_HEADERS
 #add_executable(shardmap_test test/main.cpp test/shardmap.cpp ${futil_UTIL_HEADERS} ${futil_UTIL_SOURCES})
 #target_link_libraries(shardmap_test ${Boost_LIBRARIES})
 
-add_executable(avl_tree_test test/main.cpp test/avl_tree.cpp ${futil_HEADERS} ${futil_SOURCES})
+add_executable(avl_performance_test test/avl_performance_test.cpp ${futil_HEADERS} ${futil_SOURCES})
+target_link_libraries(avl_performance_test ${Boost_LIBRARIES}  ${JEMALLOC_LIBRARIES})
+#add_test(avl_tree ./avl_tree_test)
+
+add_executable(avl_tree_test  test/avl_tree.cpp ${futil_HEADERS} ${futil_SOURCES})
 target_link_libraries(avl_tree_test ${Boost_LIBRARIES})
 add_test(avl_tree ./avl_tree_test)
 
-add_executable(profiler_test test/main.cpp test/profiler.cpp ${futil_HEADERS} ${futil_SOURCES})
+add_executable(profiler_test  test/profiler.cpp ${futil_HEADERS} ${futil_SOURCES})
 target_link_libraries(profiler_test ${Boost_LIBRARIES})
 add_test(profiler ./profiler_test)
 
-add_executable(const_pool_test test/main.cpp test/const_pool.cpp ${futil_HEADERS} ${futil_SOURCES})
+add_executable(const_pool_test test/const_pool.cpp ${futil_HEADERS} ${futil_SOURCES})
 target_link_libraries(const_pool_test ${Boost_LIBRARIES})
 add_test(const_pool_test ./const_pool_test)
 
-add_executable(rlu_map_test test/main.cpp test/rlu_map.cpp ${futil_HEADERS} ${futil_SOURCES})
+add_executable(rlu_map_test test/rlu_map.cpp ${futil_HEADERS} ${futil_SOURCES})
 target_link_libraries(rlu_map_test ${Boost_LIBRARIES})
 add_test(rlu_map_test ./rlu_map_test)
 
