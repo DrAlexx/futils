@@ -2,6 +2,7 @@
 
 #include "avl_balancer.h"
 #include "util/allocator.h"
+#include "util/stack_adaptor.h"
 
 #include <functional>
 #include <initializer_list>
@@ -71,7 +72,6 @@ private:
         using key_type      = Key;
         using mapped_type   = T;
 
-        constexpr inline static std::align_val_t node_align{8};
         using value_type = typename std::conditional<
             std::is_void<mapped_type>::value,
             key_type,
@@ -232,7 +232,18 @@ public:
      * @tparam F functional object type
      */
     template <typename F>
-    void enumerate(F f);
+    void enumerate_asc(F f) {
+        enumerate_impl(root, 0, [f](auto node) -> bool {
+            return f((const typename Node::value_type&)node->value);
+        });
+    }
+
+    template <typename F>
+    void enumerate_desc(F f) {
+        enumerate_impl(root, 1, [f](auto node) -> bool {
+            return f((const typename Node::value_type&)node->value);
+        });
+    }
 
     template <typename K, typename F>
     void enumerate_lower_bound(const K& x, F f);
@@ -264,15 +275,15 @@ private:
     node_pointer     root = nullptr;
     size_t           node_count = 0;
 
-    template <typename F>
-    void recursive_enumerate(node_pointer start_node, F f);
-
     template<typename K>
     static node_pointer lookup(node_pointer node, const K& key) {
         while (node != nullptr && key != Node::get_key(node->value))
             node = node->get_next(key);
         return node;
     }
+
+    template <typename F>
+    static void enumerate_impl(node_pointer root, int dir, F f);
 
     //For testing
     template<typename F>
@@ -353,14 +364,6 @@ typename tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, All
 }
 
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
-template <typename F>
-void tree<Key, T, B, Compare, Alloc>::enumerate(F f) {
-    recursive_enumerate(root, [f](auto* node){
-        f(node->value);
-    });
-}
-
-template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
 template <typename K, typename F>
 void tree<Key, T, B, Compare, Alloc>::enumerate_lower_bound(const K& x, F f) {
 
@@ -382,10 +385,43 @@ void tree<Key, T, B, Compare, Alloc>::swap(tree<Key, T, B, Compare, Alloc>& othe
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
 void tree<Key, T, B, Compare, Alloc>::clear() noexcept
 {
-    recursive_enumerate(root, [this](auto* node){
-        std::allocator_traits<Node_alloc_type>::destroy(node_allocator, node);
-        node_allocator.deallocate(node, node_align);
-    });
+    //TODO: is possible to improve preformance via custom memory pool
+
+    if(root == nullptr)
+        return;
+
+    auto node = root;
+    util::stack_adaptor<node_pointer> stack;
+    node_pointer stack_buff[sizeof(node) * 8 + 1];
+    stack.set_buffer(std::span(stack_buff));
+    stack.push(nullptr);
+
+    do {
+        switch ((uintptr_t)node & 0x3) {
+            case 0: //Going down
+                while (node->links[0] != nullptr) {
+                    stack.push((node_pointer)((uintptr_t)node | 0x1));
+                    node = node->links[0];
+                }
+                node = (node_pointer)((uintptr_t)node | 0x1);
+                break;
+            case 1: //Going left up
+                node = (node_pointer)((uintptr_t)node & ~0x3);
+                if (node->links[1] != nullptr) {
+                    stack.push((node_pointer)((uintptr_t)node | 0x2));
+                    node = node->links[1];
+                } else {
+                    node = (node_pointer)((uintptr_t)node | 0x2);
+                }
+                break;
+            case 2: //Going right up
+                node = (node_pointer)((uintptr_t)node & ~0x3);
+                std::allocator_traits<Node_alloc_type>::destroy(node_allocator, node);
+                node_allocator.deallocate(node, node_align);
+                node = stack.pop();
+                break;
+        };
+    } while (node != nullptr);
 
     root = nullptr;
     node_count = 0;
@@ -393,44 +429,42 @@ void tree<Key, T, B, Compare, Alloc>::clear() noexcept
 
 template <typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
 template <typename F>
-void tree<Key, T, B, Compare, Alloc>::recursive_enumerate(node_pointer start_node, F f) {
-    if(start_node == nullptr)
+void tree<Key, T, B, Compare, Alloc>::enumerate_impl(node_pointer root, int dir, F visitor) {
+    if(root == nullptr)
         return;
 
-    if(start_node->links[0] != nullptr)
-        recursive_enumerate(start_node->links[0], f);
+    auto node = root;
+    util::stack_adaptor<node_pointer> stack;
+    node_pointer stack_buff[sizeof(node) * 8 + 1];
+    stack.set_buffer(std::span(stack_buff));
+    stack.push(nullptr);
 
-    if(start_node->links[1] != nullptr)
-        recursive_enumerate(start_node->links[1], f);
-
-    f(start_node);
+    do {
+        switch ((uintptr_t)node & 0x3) {
+            case 0: //Going down
+                while ( node->links[dir] != nullptr) {
+                    stack.push((node_pointer)((uintptr_t)node | 0x1));
+                    node = node->links[dir];
+                }
+                node = (node_pointer)((uintptr_t)node | 0x1);
+                break;
+            case 1: //Going left up
+                node = (node_pointer)((uintptr_t)node & ~0x3);
+                if (!visitor(node)) {
+                    return;
+                }
+                if (node->links[1 - dir] != nullptr) {
+                    stack.push((node_pointer)((uintptr_t)node | 0x2));
+                    node = node->links[1 - dir];
+                } else {
+                    node = stack.pop();
+                }
+                break;
+            case 2: //Going right up
+                node = stack.pop();
+                break;
+        };
+    } while (node != nullptr);
 }
-
-//template <typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
-//template <typename F>
-//void tree<Key, T, B, Compare, Alloc>::enumerate(node_pointer start_node, size_t max_depth, F f) {
-//    if(start_node == nullptr || max_depth == 0)
-//        return;
-
-//    decltype(start_node->links[0]) stack[max_depth];
-//    int stack_ptr = 0;
-
-//    do {
-//        if(start_node->links[0] != nullptr) {
-//            stack[stack_ptr++] = start_node;
-//            start_node = start_node->links[0];
-//            continue;
-//        }
-//        if(start_node->links[1] != nullptr) {
-//            stack[stack_ptr++] = start_node;
-//            start_node = start_node->links[1];
-//            continue;
-//        }
-//        f(start_node->value);
-
-
-//    } while (start_node != nullptr);
-
-//}
 
 }
