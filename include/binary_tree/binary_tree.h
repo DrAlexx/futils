@@ -233,14 +233,14 @@ public:
      */
     template <typename F>
     void enumerate_asc(F f) {
-        enumerate_impl(root, 0, [f](auto node) -> bool {
+        enumerate_impl(root, node_count, 0, [f](auto node) -> bool {
             return f((const typename Node::value_type&)node->value);
         });
     }
 
     template <typename F>
     void enumerate_desc(F f) {
-        enumerate_impl(root, 1, [f](auto node) -> bool {
+        enumerate_impl(root, node_count, 1, [f](auto node) -> bool {
             return f((const typename Node::value_type&)node->value);
         });
     }
@@ -283,7 +283,7 @@ private:
     }
 
     template <typename F>
-    static void enumerate_impl(node_pointer root, int dir, F f);
+    static void enumerate_impl(node_pointer root, unsigned node_count, int dir, F f);
 
     //For testing
     template<typename F>
@@ -429,14 +429,15 @@ void tree<Key, T, B, Compare, Alloc>::clear() noexcept
 
 template <typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
 template <typename F>
-void tree<Key, T, B, Compare, Alloc>::enumerate_impl(node_pointer root, int dir, F visitor) {
+void tree<Key, T, B, Compare, Alloc>::enumerate_impl(node_pointer root, unsigned node_count, int dir, F visitor) {
     if(root == nullptr)
         return;
 
     auto node = root;
+    auto tree_height = 8 * sizeof (unsigned long long) - __builtin_clzll(node_count << 1) - 1;
     util::stack_adaptor<node_pointer> stack;
-    node_pointer stack_buff[sizeof(node) * 8 + 1];
-    stack.set_buffer(std::span(stack_buff));
+    node_pointer stack_buff[tree_height + 1];
+    stack.set_buffer(std::span(&stack_buff[0], &stack_buff[tree_height + 1]));
     stack.push(nullptr);
 
     do {
