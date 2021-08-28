@@ -8,7 +8,7 @@
 #include <iostream>
 
 profiler::point_set mgr_time;
-constexpr int repeat = 50;
+constexpr int repeat = 100;
 
 binary_tree::tree<int>  avl_tree;
 std::set<int>  std_set;
@@ -45,26 +45,26 @@ void std_set_test(int n) {
     }
 }
 
-void pbds_test(int n) {
-    static const char point_name[] = "PBDS";
-    profiler::point<mgr_time, point_name>   test_point;
+//void pbds_test(int n) {
+//    static const char point_name[] = "PBDS";
+//    profiler::point<mgr_time, point_name>   test_point;
 
-    for(int i = 0; i < repeat; ++i) {
-        for(int v = 0; v < n; ++v) {
-            pbds_set.insert(v);
-        }
-        pbds_set.clear();
-    }
-}
+//    for(int i = 0; i < repeat; ++i) {
+//        for(int v = 0; v < n; ++v) {
+//            pbds_set.insert(v);
+//        }
+//        pbds_set.clear();
+//    }
+//}
 
 int main(int /*argc*/, char** /*argv*/) {
-    for (int i = 100; i < 10000000; i*=10) {
+    for (int i = 100; i < 1000000; i*=10) {
         avl_test(i);
         std_set_test(i);
-        pbds_test(i);
+//        pbds_test(i);
 
         profiler::point_set::get_manager<mgr_time>().for_each_point([i](const std::string_view name, uint64_t call_count, uint64_t cumulative_time_us){
-            std::cout << name << "   Size: " << i << "\tTime: " << cumulative_time_us/call_count << "us" << std::endl;
+            std::cout << name << "   Size: " << i << "\tTime: " << cumulative_time_us/call_count << "us" << "\t call count=" << call_count << std::endl;
         });
         profiler::point_set::get_manager<mgr_time>().reset();
         std::cout << std::endl;

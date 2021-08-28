@@ -22,26 +22,21 @@ public:
     }
 
     [[nodiscard]] constexpr bool empty() const noexcept {
-        return span.empty();
+        return head == 0;
     }
 
     value_type& front() const {
-        if (head == 0 ) {
-            throw std::out_of_range("Empty stack!");
-        }
         return span[head - 1];
     }
 
     void push(value_type v) {
-        if (head == span.size())
-            throw std::out_of_range("No space left");
+//        if (head == span.size()) {
+//            throw std::runtime_error("OOps!");
+//        }
         span[head++] = v;
     }
 
     value_type pop() {
-        if (head == 0 ) {
-            throw std::out_of_range("Empty stack!");
-        }
         auto v = span[head - 1];
         head--;
         return v;

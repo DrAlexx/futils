@@ -1,16 +1,15 @@
 #pragma once
 
-#include "avl_balancer.h"
-#include "util/allocator.h"
-#include "util/stack_adaptor.h"
-
+#include <compare>
 #include <functional>
-#include <initializer_list>
 #include <limits>
 #include <memory>
 #include <type_traits>
 #include <utility>
-#include <sstream>
+#include <iostream>
+
+#include "avl_balancer.h"
+#include "util/stack_adaptor.h"
 
 /** @defgroup binary_tree binary_tree
  * @brief Self balanced binary tree (AVL, RB, etc)
@@ -63,8 +62,10 @@ namespace binary_tree {
  * @tparam Alloc Type of the allocator object used to define the storage allocation model.
  * By default, the allocator class template is used, which defines the simplest memory allocation model and is value-independent.
  */
-template<typename Key, typename T = void, typename B = binary_tree::avl_balancer, typename Compare = std::less<Key>,
-         template<typename X> typename Alloc = util::allocator>
+template<typename Key, typename T = void,
+         typename B = binary_tree::avl_balancer,
+         typename Compare = std::compare_three_way,
+         template<typename X> typename Alloc = std::allocator>
 class tree
 {
 private:
@@ -85,9 +86,23 @@ private:
         {}
 
         template<typename K>
-        int get_direction(const K& key) {
-            return key_compare{}(key, value)? 0 : 1;
+        auto compare(const K& key) {
+            return key_compare{}(key, value);
         }
+
+        int get_direction(const std::strong_ordering ord) {
+            return std::is_lt(ord)? 0 : 1;
+        }
+
+        template<typename K>
+        int get_direction(const K& key) {
+            return get_direction(compare(key));
+        }
+
+        auto get_next(const std::strong_ordering ord) {
+            return links[get_direction(ord)];
+        }
+
         template<typename K>
         auto get_next(const K& key) {
             return links[get_direction(key)];
@@ -114,7 +129,6 @@ private:
     using node_type       = Node;
     using node_pointer    = node_type*;
     using Node_alloc_type = Alloc<node_type>;
-    constexpr inline static std::align_val_t node_align{8};
 
 public:
     ///Alias for Key
@@ -130,6 +144,11 @@ public:
     using key_compare    = Compare;
 
     using size_type = std::size_t;
+
+    enum class EnumerationOrder : int{
+        ASCENDING  = 0,
+        DESCENDING = 1,
+    };
 
     //Construct
     /**
@@ -173,13 +192,13 @@ public:
      * @brief size
      * @return the number of elements in the container
      */
-    size_type size() const noexcept;
+    [[nodiscard]] size_type size() const noexcept;
 
     /**
      * @brief max_size
      * @return the maximum possible number of elements
      */
-    size_type max_size() const noexcept;
+    [[nodiscard]] size_type max_size() const noexcept;
 
     //Modifiers
     /**
@@ -220,10 +239,10 @@ public:
      * @return Number of elements with key that compares equivalent to key or x, which is either 1 or 0 for (1).
      */
     template <typename K>
-    size_type count(const K& x) const;
+    [[nodiscard]] size_type count(const K& x) const;
 
     template <typename K>
-    bool contains(const K& x) const {
+    [[nodiscard]] bool contains(const K& x) const {
         return count(x) != 0;
     }
 
@@ -232,24 +251,7 @@ public:
      * @tparam F functional object type
      */
     template <typename F>
-    void enumerate_asc(F f) {
-        enumerate_impl(root, 0, [f](auto node) -> bool {
-            return f((const typename Node::value_type&)node->value);
-        });
-    }
-
-    template <typename F>
-    void enumerate_desc(F f) {
-        enumerate_impl(root, 1, [f](auto node) -> bool {
-            return f((const typename Node::value_type&)node->value);
-        });
-    }
-
-    template <typename K, typename F>
-    void enumerate_lower_bound(const K& x, F f);
-
-    template <typename K, typename F>
-    void enumerate_upper_bound(const K& x, F f);
+    void enumerate(F visitor, EnumerationOrder order = EnumerationOrder::ASCENDING);
 
     //Test & debug
     /**
@@ -264,7 +266,7 @@ public:
      * @brief dump_tree dumps tree content into graphviz BST format
      * @param ss
      */
-    void dump_tree (std::ostringstream& ss) const {
+    void dump_tree (std::ostream& ss) const {
         ss << "digraph BST {\n";
         recursive_dump(root, ss);
         ss << "}\n";
@@ -283,7 +285,7 @@ private:
     }
 
     template <typename F>
-    static void enumerate_impl(node_pointer root, int dir, F f);
+    static void enumerate_impl(node_pointer root, unsigned node_count, int dir, F f);
 
     //For testing
     template<typename F>
@@ -294,14 +296,14 @@ private:
         check_height(node_type::get_height(node->links[0]), node_type::get_height(node->links[1]));
     }
 
-    static void recursive_dump(node_pointer node, std::ostringstream& ss) {
+    static void recursive_dump(node_pointer node, std::ostream& ss) {
         if (node != nullptr) {
-            ss << '"' << get_key(node->value) << "\" -> { " ;
+            ss << '"' << Node::get_key(node->value) << "\" -> { " ;
             if (node->links[0] != nullptr) {
-                ss << '"' << get_key(node->links[0]->value) << "\" ";
+                ss << '"' << Node::get_key(node->links[0]->value) << "\" ";
             }
             if (node->links[1] != nullptr) {
-                ss << '"' << get_key(node->links[1]->value) << "\" ";
+                ss << '"' << Node::get_key(node->links[1]->value) << "\" ";
             }
             ss << "}\n";
             recursive_dump(node->links[0], ss);
@@ -337,7 +339,7 @@ typename tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, All
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
 bool tree<Key, T, B, Compare, Alloc>::insert(const tree<Key, T, B, Compare, Alloc>::value_type& value) {
     return B::insert(&root, value, [this](tree<Key, T, B, Compare, Alloc>::Node** parent_ptr, const tree<Key, T, B, Compare, Alloc>::value_type& value){
-        auto new_node = node_allocator.allocate(1, node_align);
+        auto new_node = node_allocator.allocate(1);
         std::allocator_traits<Node_alloc_type>::construct(node_allocator, new_node, value);
         ++node_count;
         *parent_ptr = new_node;
@@ -349,7 +351,7 @@ typename tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, All
     auto targetn = B::erase(&root, key);
     if (targetn != nullptr) {
         std::allocator_traits<Node_alloc_type>::destroy(node_allocator, targetn);
-        node_allocator.deallocate(targetn, node_align);
+        node_allocator.deallocate(targetn, 1);
         --node_count;
         return 1;
     }
@@ -361,18 +363,6 @@ template<typename K>
 typename tree<Key, T, B, Compare, Alloc>::size_type tree<Key, T, B, Compare, Alloc>::count(const K& x) const
 {
     return tree<Key, T, B, Compare, Alloc>::lookup(root, x) == nullptr? 0 : 1;
-}
-
-template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
-template <typename K, typename F>
-void tree<Key, T, B, Compare, Alloc>::enumerate_lower_bound(const K& x, F f) {
-
-}
-
-template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
-template <typename K, typename F>
-void tree<Key, T, B, Compare, Alloc>::enumerate_upper_bound(const K& x, F f) {
-
 }
 
 template<typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
@@ -390,38 +380,43 @@ void tree<Key, T, B, Compare, Alloc>::clear() noexcept
     if(root == nullptr)
         return;
 
-    auto node = root;
+    auto tree_height = 8 * sizeof (unsigned long long) - __builtin_clzll(node_count);
+    tree_height += tree_height/2;
     util::stack_adaptor<node_pointer> stack;
-    node_pointer stack_buff[sizeof(node) * 8 + 1];
-    stack.set_buffer(std::span(stack_buff));
-    stack.push(nullptr);
+    node_pointer stack_buff[tree_height];
+    stack.set_buffer(std::span(&stack_buff[0], &stack_buff[tree_height]));
 
-    do {
-        switch ((uintptr_t)node & 0x3) {
-            case 0: //Going down
-                while (node->links[0] != nullptr) {
-                    stack.push((node_pointer)((uintptr_t)node | 0x1));
-                    node = node->links[0];
-                }
-                node = (node_pointer)((uintptr_t)node | 0x1);
-                break;
-            case 1: //Going left up
-                node = (node_pointer)((uintptr_t)node & ~0x3);
-                if (node->links[1] != nullptr) {
-                    stack.push((node_pointer)((uintptr_t)node | 0x2));
-                    node = node->links[1];
-                } else {
-                    node = (node_pointer)((uintptr_t)node | 0x2);
-                }
-                break;
-            case 2: //Going right up
-                node = (node_pointer)((uintptr_t)node & ~0x3);
-                std::allocator_traits<Node_alloc_type>::destroy(node_allocator, node);
-                node_allocator.deallocate(node, node_align);
-                node = stack.pop();
-                break;
-        };
-    } while (node != nullptr);
+    for (auto node = root; true;) {
+        // Going down as deep as possible
+        for (; node->links[0] != nullptr; node = node->links[0]) {
+            stack.push(node);
+        }
+
+    going_right:
+        if (auto next = node->links[1]; next != nullptr) {
+            // going right into depth
+            stack.push(node);
+            node = next;
+            continue;
+        }
+
+    remove_node:
+        // node is leaf
+        std::allocator_traits<Node_alloc_type>::destroy(node_allocator, node);
+        node_allocator.deallocate(node, 1);
+
+        if (!stack.empty()) {
+            // going up
+            node = stack.pop();
+            if (node->links[0] == nullptr) {
+                goto remove_node;
+            }
+            node->links[0] = nullptr;
+            goto going_right;
+        }
+        // clearing is done
+        break;
+    }
 
     root = nullptr;
     node_count = 0;
@@ -429,42 +424,40 @@ void tree<Key, T, B, Compare, Alloc>::clear() noexcept
 
 template <typename Key, typename T, typename B, typename Compare, template<typename X> typename Alloc>
 template <typename F>
-void tree<Key, T, B, Compare, Alloc>::enumerate_impl(node_pointer root, int dir, F visitor) {
+void tree<Key, T, B, Compare, Alloc>::enumerate(F visitor, EnumerationOrder o) {
+    auto order = static_cast<int>(o);
     if(root == nullptr)
         return;
 
-    auto node = root;
+    auto tree_height = 8 * sizeof (unsigned long long) - __builtin_clzll(node_count);
+    tree_height += tree_height/2;
     util::stack_adaptor<node_pointer> stack;
-    node_pointer stack_buff[sizeof(node) * 8 + 1];
-    stack.set_buffer(std::span(stack_buff));
-    stack.push(nullptr);
+    node_pointer stack_buff[tree_height];
+    stack.set_buffer(std::span(&stack_buff[0], &stack_buff[tree_height]));
 
-    do {
-        switch ((uintptr_t)node & 0x3) {
-            case 0: //Going down
-                while ( node->links[dir] != nullptr) {
-                    stack.push((node_pointer)((uintptr_t)node | 0x1));
-                    node = node->links[dir];
-                }
-                node = (node_pointer)((uintptr_t)node | 0x1);
-                break;
-            case 1: //Going left up
-                node = (node_pointer)((uintptr_t)node & ~0x3);
-                if (!visitor(node)) {
-                    return;
-                }
-                if (node->links[1 - dir] != nullptr) {
-                    stack.push((node_pointer)((uintptr_t)node | 0x2));
-                    node = node->links[1 - dir];
-                } else {
-                    node = stack.pop();
-                }
-                break;
-            case 2: //Going right up
-                node = stack.pop();
-                break;
-        };
-    } while (node != nullptr);
+    for (auto node = root; true;) {
+        // Going down as deep as possible
+        for (; node->links[order] != nullptr; node = node->links[order]) {
+            stack.push(node);
+        }
+
+    visit_node:
+        if (!visitor(node->value)) {
+            return;
+        }
+        // Going down via second link
+        if (auto next = node->links[1-order]; next != nullptr) {
+            node = next;
+            continue;
+        }
+        // Going up
+        if (!stack.empty()) {
+            node = stack.pop();
+            goto visit_node;
+        }
+        // enumerating is done
+        break;
+    }
 }
 
 }

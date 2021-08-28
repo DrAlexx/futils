@@ -69,15 +69,16 @@ static bool insert(Node** root, typename Node::value_type value, C create_node)
     auto node_ptr   = root;
     auto path_top   = root;
     auto node       = *root;
-    while (node != nullptr && key != Node::get_key(node->value)){
-        if (!node->is_balanced())
+    while (node != nullptr) [[likely]] {
+        auto cmp = node->compare(key);
+        if (cmp == std::strong_ordering::equivalent) [[unlikely]]
+            return false;
+        if (!node->is_balanced()) [[unlikely]]
             path_top = node_ptr;
-        auto dir = node->get_direction(key);
-        node_ptr = &(node->links[dir]);
+        node_ptr = &(node->links[node->get_direction(cmp)]);
         node = *node_ptr;
     }
-    if (node != nullptr)
-        return  false; //already has the key
+
     create_node(node_ptr, value);
 
     //Stage 2. Rebalance
@@ -109,8 +110,11 @@ static bool insert(Node** root, typename Node::value_type value, C create_node)
     }
 
     //Stage 3. Update balance info in the each node
-    while (path != nullptr && key != Node::get_key(path->value)) {
-        auto direction = path->get_direction(key);
+    while (path != nullptr) [[likely]] {
+        auto cmp = path->compare(key);
+        if (cmp == std::strong_ordering::equivalent)
+            break;
+        auto direction = path->get_direction(cmp);
         path->set_balance(direction);
         path = path->links[direction];
     }
@@ -127,9 +131,10 @@ static Node* erase(Node** root, const typename Node::key_type& key) noexcept
     decltype(path_top) targetp = nullptr;
     int dir = 0;
 
-    while (node) {
+    while (node) [[likely]] {
+        auto cmp = node->compare(key);
         dir = node->get_direction(key);
-        if (key == Node::get_key(node->value))
+        if (cmp == std::strong_ordering::equivalent)
             targetp = nodep;
         if (node->links[dir] == nullptr)
             break;
@@ -139,7 +144,7 @@ static Node* erase(Node** root, const typename Node::key_type& key) noexcept
         nodep = &node->links[dir];
         node = *nodep;
     }
-    if (targetp == nullptr)
+    if (targetp == nullptr) [[unlikely]]
         return nullptr; //key not found nothing to remove
 
     /*
@@ -151,7 +156,7 @@ static Node* erase(Node** root, const typename Node::key_type& key) noexcept
      */
     auto treep = path_top;
     auto targetn = *targetp;
-    while(true) {
+    while(true) [[likely]] {
         auto tree = *treep;
         auto bdir = tree->get_direction(key);
         if (tree->links[bdir] == nullptr)
